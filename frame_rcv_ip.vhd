@@ -11,7 +11,7 @@
 -- Tool versions: Quartus 18.1, Platform Designer 16.1
 -- Description:
 --
--- taking data from deserialzer, and form event data (YW: see more comments below for ip packaging)
+--      taking data from deserialzer, and form event data (YW: see more comments below for ip packaging)
 --
 -- Dependencies: crc16_calc.vhd (submodule)
 --
@@ -23,10 +23,10 @@
 -- Revision 1.21 - YW: correct the sop/eop to the first/last hit valid cycles. 
 
 -- Additional Comments:
--- IP wrapper layer: 
--- Input: lvds 8b1k data, forms packet of hits. 
--- Output: 1) mutrig packets in avst frame, 2) header info in avst.
--- Controlled by: 1) avst enable signal (standard RUN_SEQUENCE) 2) avmm CSR (debug mode to bypass/ignore errors/exceptions)
+--      IP wrapper layer: 
+--              Input: lvds 8b1k data, forms packet of hits. 
+--              Output: 1) mutrig packets in avst frame, 2) header info in avst.
+--      Controlled by: 1) avst enable signal (standard RUN_SEQUENCE) 2) avmm CSR (debug mode to bypass/ignore errors/exceptions)
 ----------------------------------------------------------------------------------
 
 -- ================ synthsizer configuration =================== 		
@@ -38,70 +38,88 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use IEEE.math_real.log2;
 use IEEE.math_real.ceil;
-use ieee.std_logic_arith.conv_std_logic_vector;
 
 entity frame_rcv_ip is
 generic (
-	DEBUG_BYPASS_ERROR		: natural := 0; 
-	SIMULATION_EN			: natural := 0; 
-    ASIC_ID                 : natural := 0 -- channel index dummy generic, the output channel is set by the input avst channel 
+    -- +------------+
+    -- | IP setting |
+    -- +------------+
+	CHANNEL_WIDTH           : natural := 4; -- width of the avst <channel> signal 
+    CSR_ADDR_WIDTH          : natural := 2; -- width of the avmm csr <address> signal
+    -- +----------------+
+    -- | Error Handling |
+    -- +----------------+
+    MODE_HALT               : natural := 0; -- error handling of "frame_rcv" in lane corrupt incidence; 
+                                            -- 1: ("IDLE" mode) do not resume frame parsing after corrupt. 0: ("HALT" mode) resume parsing after corrupt.
+	-- +--------------------+
+    -- | Generation setting |
+    -- +--------------------+
+    DEBUG_LV			    : natural := 0  -- debug level; 0: no debug. 1: syn and sim. 2: sim-only
 );
 port(
-	-- input stream of 8b1k from lvds receiver
+	-- AVST sink [rx8b1k]
+    -- (input stream of 8b1k from lvds receiver)
 	asi_rx8b1k_data					: in  std_logic_vector(8 downto 0);
 	asi_rx8b1k_valid				: in  std_logic;
 	asi_rx8b1k_error				: in  std_logic_vector(2 downto 0); 
-		-- disperr & decerr & lane_training_fail;
-	asi_rx8b1k_channel 				: in  std_logic_vector(3 downto 0); -- the output channel is set by it
-	 
-    -- output stream of hits
-	aso_hit_type0_channel			: out std_logic_vector(3 downto 0); -- for asic 0-15
+    -- =============================================================
+    -- <errorDescriptor>
+    --      <bit2>                  <bit1>          <bit0>
+    -- =============================================================
+    -- old: disperr & decerr & lane_training_fail;
+    -- new: "loss_sync_pattern"     "parity_error"  "decode_error"
+	asi_rx8b1k_channel 				: in  std_logic_vector(CHANNEL_WIDTH-1 downto 0); -- the output channel is set by it
+    -- NOTE: there is no pipeline for the channel signal along data path, so dynamic changing the channel is NOT supported yet. 
+    -- TODO: you can implement this 
+     
+    -- AVST source [hit_type0]
+	aso_hit_type0_channel			: out std_logic_vector(CHANNEL_WIDTH-1 downto 0); -- for asic 0-15
 	aso_hit_type0_startofpacket		: out std_logic;
 	aso_hit_type0_endofpacket		: out std_logic;
 	aso_hit_type0_error				: out std_logic_vector(2 downto 0); 
-	-- frame_corrupt & crcerr & hiterr
-		-- crcerr available at "eop"
-		-- hiterr available at "valid"
+    -- =============================================================
+    -- <errorDescriptor>
+    -- <bit2>           <bit1>      <bit0>
+    -- =============================================================
+	-- "frame_corrupt" "crc_error" "hit_error"
+    -- crc_error available at "eop"
+	-- hit_error available at "valid"
 	aso_hit_type0_data				: out std_logic_vector(44 downto 0); -- valid is a seperate signal below
 	aso_hit_type0_valid 			: out std_logic;
 
-	-- output stream of header
-    -- header information
+    -- AVST source [headerinfo]
+    -- (header information)
 	aso_headerinfo_data				: out std_logic_vector(41 downto 0);
 	aso_headerinfo_valid			: out std_logic;
-	aso_headerinfo_channel			: out std_logic_vector(3 downto 0);
+	aso_headerinfo_channel			: out std_logic_vector(CHANNEL_WIDTH-1 downto 0);
 
-	-- avmm-slave
-	-- control and status registers
+	-- AVMM slave [csr]
+	-- (control and status registers)
 	avs_csr_readdata				: out std_logic_vector(31 downto 0);
 	avs_csr_read					: in  std_logic;
-	avs_csr_address					: in  std_logic_vector(0 downto 0);
+	avs_csr_address					: in  std_logic_vector(CSR_ADDR_WIDTH-1 downto 0);
 	avs_csr_waitrequest				: out std_logic;
-	avs_csr_byteenable				: in  std_logic_vector(3 downto 0);
 	avs_csr_write					: in  std_logic;
 	avs_csr_writedata				: in  std_logic_vector(31 downto 0);
-	 
-	-- Flow control inside system: it was controlled by the `ctrl_start' signal. Now, it should be controlled by the 
-	-- ready signal from the upstream, which is pipelined within the datapath. The ready allowance 
-	-- of the downstream module must be higher than the length of a frame. (no, ready allowance is only up to 8) 
-	-- So, a frame can be flushed through with the RUN_END incidence. Otherwise, it is also possible
-	-- to do a backpressure before the channel mux. Then, the sorter (itself is a buffer), will consume 
-	-- the from the backpressure buffer after the mux. 
 	
-	-- input stream of control signal (enable)
+    -- AVST sink [ctrl]
+	-- (management interface of run control timing)
 	-- this signal is time critical and must be synchronzed for all datapath modules
 	asi_ctrl_data			: in  std_logic_vector(8 downto 0); 
 	asi_ctrl_valid			: in  std_logic;
 	asi_ctrl_ready			: out std_logic;
 	
-	-- reset / clock / enable
+    -- clock and reset interface 
+    -- [data_reset] (data plane reset)
     i_rst                   : in std_logic; -- async reset assertion, sync reset release
+    -- [data_clock] (data plane clock)
     i_clk                   : in std_logic -- clock should match the input lvds parallel clock
 
 );
 end entity frame_rcv_ip;
 
 architecture rtl of frame_rcv_ip is
+    
 
 	-- Hit type (long) before sorter, before TCC division
 	-- ==================================================================
@@ -200,7 +218,16 @@ architecture rtl of frame_rcv_ip is
 	signal n_frame_info_ready_d1		: std_logic;
 	signal aso_headerinfo_valid_comb	: std_logic;
 	
-	-- avmm csr
+	
+	
+	
+	-- run control mgmt
+	type run_state_t is (IDLE, RUN_PREPARE, SYNC, RUNNING, TERMINATING, LINK_TEST, SYNC_TEST, RESET, OUT_OF_DAQ, ERROR);
+	signal run_state_cmd				: run_state_t;
+    
+    -- //////////////////////////////////////////////////
+    -- avmm_slave_csr
+    -- //////////////////////////////////////////////////
 	type csr_t is record
 		error_cnt		: std_logic_vector(31 downto 0);
 		status			: std_logic_vector(7 downto 0); -- bit[5:0]: current frame flag
@@ -208,35 +235,106 @@ architecture rtl of frame_rcv_ip is
 		-- "running" is generate new frame, "idle" is finishing current frame and do not generate new frame
 		-- "set to run" is enable, "set to stop" is enable_n (do not generate new frame). 
 		-- exception to be implemented
+        frame_counter   : std_logic_vector(31 downto 0);
+        crc_err_counter : std_logic_vector(31 downto 0);
 	end record;
 	signal csr 		: csr_t;
-	
-	
-	-- run control mgmt
-	type run_state_t is (IDLE, RUN_PREPARE, SYNC, RUNNING, TERMINATING, LINK_TEST, SYNC_TEST, RESET, OUT_OF_DAQ, ERROR);
-	signal run_state_cmd				: run_state_t;
 	 
 begin
 
+    -- ====================================================================================================
+    -- @commentName     Recovery of bad frame for the downstream 
+	-- 
+    -- @comment         1) missing eop (sop-...-sop-eop) => frame corrupted
+    --                          Pessimistic: Use a fifo to hold/discard the frame until the eop is seen.
+    --                          Optimistic: Continuously process the event even if the eop is missing.
+    --                  2) missing sop (...-eop-sop-eop) => frame corrupted
+    --                          "IDLE" mode: Not possible.
+    --                          "HALT" mode: The downstream can process the remaining events.
+    -- ==================================================================================================== 
+	
+	
+	-- ==================================================================================================== 
+	-- @commentName     MuTRiG frame tx flags
+    --
+    -- @comment         0b000: Long event transmission
+    --                  0b001: PRBS transmission, single event
+    --                  0b010: PRBS transmission, saturating link
+    --                  0b100: Short event transmission
+    --                  0b110: Channel event counter data trans
+	-- ====================================================================================================
 
-	-- some mapping of the new avalon signal to the internal old signals
+
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    -- @blockName       input_wrapper
+    --
+    -- @berief          mapping of the new avalon signal to the internal old signals of frame_rcv
+    -- @input           <asi_rx8b1k_error(2)> -- "loss_sync_pattern" error
+    --                  <asi_rx8b1k_data> -- from LVDS RX IP
+    -- @output          <i_data> -- data to feed to "frame_rcv"
+    --                  <i_byteisk> -- validate the <i_data>
+    -- @note            The halt condition for the frame rcv fsm is [data=BC,byteisk=1].
+	--                  Halt the fsm if the input is not valid, which should not happen unless the LVDS RX IP
+    --                  is not in OK state.
+	--                  Preventing it from parsing corrupted random digital lvds noise as hits. 
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+	-- 
 	proc_input_wrapper_comb : process (all)
-	-- The halt condition for the frame rcv fsm is [data=BC,byteisk=1].
-	-- Halt the fsm if the input is not valid, which should not happen unless the LVDS receiver is not in RUNNING_OK state.
-	-- This prevents it from parsing corrupted random digital lvds noise as hits. 
-	-- For DEBUG: check asi_rx8b1k_error(0) for lane_training_fail, if the valid goes low.
 	begin
-		if (asi_rx8b1k_valid = '1') then
+        -- -----------------------------------------------
+        -- connect the 8b data to frame_rcv entry point
+        -- -----------------------------------------------
+		if (asi_rx8b1k_error(2) = '0') then
 			i_data				<= asi_rx8b1k_data(7 downto 0);
 			i_byteisk			<= asi_rx8b1k_data(8);
-		else 
+		else -- mask if "loss_sync_pattern" error is present
 			i_data				<= x"BC";
 			i_byteisk			<= '1';
 		end if;
 	end process proc_input_wrapper_comb;
 	
-	proc_output_header_info_comb : process (all)
+	
+	
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    -- @blockName       output_header_info
+    --
+    -- @berief          avalon streaming interface for generate a "headerinfo" information
+    -- @input           <n_frame_flags> - comb of the frame flags (gen_idle fast_mode prbs_debug single_prbs fifo_full pll_lol_n)
+    --                  <n_frame_len> - frame length in number of events
+    --                  <n_word_cnt> - number of event (runnnig index, incr. as the events are coming. Now at the sop should be '0')
+    --                  <n_frame_number> - current frame number, aka "index"
+    --                  <n_frame_info_ready> - ready signal, assert after the header is been decoded, deassert during frame idle
+    -- @output          <aso_headerinfo_*> - interface signals
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+	proc_output_header_info : process (i_clk,i_rst)
 	begin
+		if (i_rst = '1' ) then 
+			aso_headerinfo_valid				<= '0';
+		elsif rising_edge(i_clk) then
+            -- ---------------------------
+            -- packing interface signals 
+            -- ---------------------------
+            -- data
+			aso_headerinfo_data(5 downto 0)		<= n_frame_flags;
+			aso_headerinfo_data(15 downto 6)	<= n_frame_len;
+			aso_headerinfo_data(25 downto 16)	<= std_logic_vector(n_word_cnt);
+			aso_headerinfo_data(41 downto 26)	<= n_frame_number;
+            -- valid
+			aso_headerinfo_valid				<= aso_headerinfo_valid_comb;
+            -- channel 
+            aso_headerinfo_channel				<= asi_rx8b1k_channel;
+            -- -------------
+            -- pipeline 
+            -- -------------
+			n_frame_info_ready_d1				<= n_frame_info_ready;
+		end if;
+	end process proc_output_header_info;
+    
+    proc_output_header_info_comb : process (all)
+	begin
+        -- -----------------------------
+        -- latch pulse for frame info
+        -- -----------------------------
 		if (n_frame_info_ready_d1 = '0') then
 			aso_headerinfo_valid_comb		<= n_frame_info_ready_d1 xor n_frame_info_ready;
 		else
@@ -244,76 +342,103 @@ begin
 		end if;
 	end process proc_output_header_info_comb;
 	
-	proc_output_header_info : process (i_clk,i_rst)
-	begin
-		if (i_rst = '1' ) then 
-			aso_headerinfo_valid				<= '0';
-		elsif rising_edge(i_clk) then
-			aso_headerinfo_data(5 downto 0)		<= n_frame_flags;
-			aso_headerinfo_data(15 downto 6)	<= n_frame_len;
-			aso_headerinfo_data(25 downto 16)	<= std_logic_vector(n_word_cnt);
-			aso_headerinfo_data(41 downto 26)	<= n_frame_number;
-			aso_headerinfo_valid				<= aso_headerinfo_valid_comb;
-			n_frame_info_ready_d1				<= n_frame_info_ready;
-			aso_headerinfo_channel				<= asi_rx8b1k_channel;
-		end if;
-	end process proc_output_header_info;
-	
 
-	
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    -- @blockName       avmm_slave_csr 
+    --
+    -- @berief          avalon memory-mapped interface for accessing the control and status registers
+    -- @input           <avs_csr_*> - interface of avmm csr
+    -- @output          <csr.*> - csr register pack
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    
+    -- ====================================================================================================
+	-- @tableName       csr address map
+    -- 
+    -- @offset_step     32 bit word
+    -- @size            4
+    -- ----------------------------------------------------------------------------------------------------
+    -- <offset>         <name>              <access>    <description>
+    -- ====================================================================================================
+	-- 0                csr      
+    -- ├── [7:0]            control         rw          [0]: '1/0'=enable/disable  
+    -- └── [31:24]          status          ro          [5:0]: frame flag (gen_idle fast_mode prbs_debug single_prbs fifo_full pll_lol_n)
+    --
+	-- 1                error counter
+    -- └── [31:0]           crc errors      ro          the number of frames with crc validation error, possibly corrupted
+    --
+	-- 2                frame counter
+    -- └── [31:0]           total frames    ro          the number of total frames (only header and trailer are both seen is count as frame)
+    -- ====================================================================================================
 	proc_avmm_slave_csr : process (i_clk,i_rst)
-	-- avalon memory-mapped interface for accessing the control and status registers
-	-- address map:
-	-- 		0: control and status (go, frame flag, TBD)
-	-- 		1: frame with crc error counter
-	-- 		2: total frame counter (TODO)
 	begin
-		if (i_rst = '1' ) then 
-			csr.control		<= (0 => '1', others => '0');
-			csr.status		<= (others => '0');
-			csr.error_cnt	<= (others => '0');
-			avs_csr_waitrequest		<= '1';
-		elsif rising_edge(i_clk) then
-			-- default
-			avs_csr_readdata			<= (others => '0');
-			-- logic
-			if (avs_csr_read = '1') then
-				avs_csr_waitrequest		<= '0';
-				case (to_integer(unsigned(avs_csr_address))) is 
-					when 0 =>
-						avs_csr_readdata(31 downto 24)		<= csr.status;
-						avs_csr_readdata(7 downto 0)		<= csr.control;
-					when 1 =>
-						avs_csr_readdata					<= csr.error_cnt;
-					when others =>
-				end case;
-			elsif (avs_csr_write = '1') then
-				avs_csr_waitrequest		<= '0';
-				case (to_integer(unsigned(avs_csr_address))) is
-					when 0 =>
-						csr.control		<= avs_csr_writedata(7 downto 0); -- address 1 (errcnt) cannot be written
-					when 1 =>
-						csr.error_cnt	<= (others => '0');
-					when others =>
-				end case;	
-			else -- idle, update values to/from agent
-				avs_csr_waitrequest		<= '1';
-				csr.error_cnt		<= o_crc_err_count; -- continuously update crc error count
-				if (n_frame_info_ready = '1') then -- update frame flag 
-					csr.status(5 downto 0)		<= n_frame_flags;
-				end if;
-				csr.status(7 downto 6)		<= (others => '0'); -- TBD
-			end if;
+		if rising_edge(i_clk) then
+            if (i_rst = '0') then 
+                -- default
+                avs_csr_readdata			<= (others => '0');
+                avs_csr_waitrequest		    <= '1';
+                if (p_state = FS_CRC_CHECK) then 
+                    csr.frame_counter       <= std_logic_vector(unsigned(csr.frame_counter) + 1);
+                end if;
+                -- ------------------
+                -- avalon read
+                -- ------------------
+                if (avs_csr_read = '1') then
+                    avs_csr_waitrequest		<= '0';
+                    case (to_integer(unsigned(avs_csr_address))) is 
+                        when 0 =>
+                            avs_csr_readdata(31 downto 24)		<= csr.status;
+                            avs_csr_readdata(7 downto 0)		<= csr.control;
+                        when 1 =>
+                            avs_csr_readdata					<= csr.crc_err_counter;
+                        when 2 =>
+                            avs_csr_readdata                    <= csr.frame_counter;
+                        when others =>
+                    end case;
+                elsif (avs_csr_write = '1') then
+                    avs_csr_waitrequest		<= '0';
+                    case (to_integer(unsigned(avs_csr_address))) is
+                        when 0 =>
+                            csr.control		<= avs_csr_writedata(7 downto 0); 
+                        when others =>
+                    end case;	
+                else -- idle, update values to/from agent
+                    avs_csr_waitrequest		<= '1';
+                    -- ------------------
+                    -- update crc error
+                    -- ------------------
+                    csr.crc_err_counter		<= p_crc_err_count; -- continuously update crc error count
+                    -- ------------------
+                    -- update frame flag 
+                    -- ------------------
+                    if (n_frame_info_ready = '1') then 
+                        csr.status(5 downto 0)		<= n_frame_flags;
+                    end if;
+                end if;
+            else 
+                csr.control		    <= (0 => '1', others => '0');
+                csr.status		    <= (others => '0');
+                csr.crc_err_counter	<= (others => '0');
+                csr.frame_counter   <= (others => '0');
+                avs_csr_waitrequest	<= '0'; -- release the bus
+            end if;
 		end if;
 
 	end process proc_avmm_slave_csr;
 	
 
-	
+	-- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    -- @blockName       enable_ctrl 
+    --
+    -- @berief          controls whether "frame_rcv" can start parsing new frame or not
+    -- @input           <receiver_force_go> - signal from "run_control_mgmt_agent", forcing it to run in 
+    --                                        any run state
+    --                  <receiver_go> - signal from "run_control_mgmt_agent", depending on the run state
+    --                                  grant the right to run
+    --                  <csr.control(0)> - signal from "avmm_slave_csr", control bit. masking the fsm, 
+    --                                     if the user do not wish to parse this lane/mutrig. 
+    -- @output          <enable> - control bit of "frame_rcv" to pick up new frame by detecting header
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	proc_enable_ctrl : process (i_clk,i_rst)
-	-- avst and avmm both can control the enable of main state machine.
-	-- avmm can mask.
-	-- avst gives enable at start of run
 	begin
 		if (i_rst = '1' ) then 
 			enable			<= '0'; -- default is disable
@@ -333,162 +458,193 @@ begin
 	end process proc_enable_ctrl;
 	
 	
+    
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    -- @blockName       output_pkt_hits 
+    --
+    -- @berief          assemble the avalon-streaming interface for outputing parsed events
+    -- @input           <asi_rx8b1k_channel> -- asic id 
+    --                  <s_o_word> -- register of the new event (short/long) 
+    --                  <p_new_word> -- register valid flag of the new event (validate <s_o_word>)
+    --                  <n_new_word> -- comb of valid flag of the new event (for latching sop/eop)
+    -- @output          <o_hits.*> -- output hits structure, also called "event"
+    --                  <aso_hit_type0_*> -- hit_type0 streaming interface signals
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	proc_output_pkt_hits_comb : process(all)
 	begin
-		
-		-- For missing eop (sop-...-sop-eop), this means frame corrupted. Old frame should be discarded
-		-- by the FIFO before mux. The ts_remapper can still use the current frame ID to infer the correction
-		-- because it is just a pipeline following the frame assembler (no flow control is needed)
-		
-		-- For missing sop (...-eop-sop-eop), this also means frame corrupted. This frame will not be loaded in the FIFO 
-		-- before mux, but user has the option to bypass this discard. 
-		
-		-- The packet scheduling and flow control should be handled before the mux. 
-		-- Corrupted frame can be discarded or kept/flaged depending on the user settings.
-		
-		-- The mux will grant packet as soon as the eop is seen for good frame. 
-		-- The mux will not use packet schedule to minimize the latency across channels.
-		-- The channel with showahead of smallest TS will be granted first. (pre-sort)?			
+        -- ---------------------------------------
+        -- assemble record from frame_rcv fsm 
+        -- ---------------------------------------
+        -- @note        taking care of the long event word and short event word
+        -- 
+        --              1) 48-bit word: send out s_o_word
+        --              2) 27-bit word: the data are at highest 27 bits
+        --              re-arrange the bit:
+        --                      put the E_flag ( s_o_word(48-27) ) to bit(0)
+        --                      fill the bit( 48-27 downto 1) with '0'
+        --              bits not carried in record: 
+        --                      T_bad_hit, E_bad_hit, E_fine, E_flag
+        o_hits.asic    <= asi_rx8b1k_channel;
+        o_hits.channel <= s_o_word(47 downto 43);
+        o_hits.T_CC    <= s_o_word(41 downto 27);
+        o_hits.T_Fine  <= s_o_word(26 downto 22);
+        case p_frame_flags(4) is 
+            when '0' =>
+                o_hits.E_CC     <= s_o_word(20 downto 6);
+                o_hits.E_Flag   <= s_o_word(21);
+            when others => 
+                o_hits.E_CC     <= (others => '0');
+                o_hits.E_Flag   <= s_o_word(0);
+        end case;
+        o_hits.valid   <= p_new_word;
+        -- ---------------------------------
+        -- avst data interface (hit_type0)
+        -- ---------------------------------
+        -- channel 
 		aso_hit_type0_channel					<= asi_rx8b1k_channel;
+        -- data 
 		aso_hit_type0_data(44 downto 41)		<= o_hits.asic;
 		aso_hit_type0_data(40 downto 36)		<= o_hits.channel;
 		aso_hit_type0_data(35 downto 21)		<= o_hits.T_CC;
 		aso_hit_type0_data(20 downto 16)		<= o_hits.T_Fine;
 		aso_hit_type0_data(15 downto 1)			<= o_hits.E_CC;
 		aso_hit_type0_data(0)					<= o_hits.E_Flag;
+        -- valid
 		aso_hit_type0_valid						<= o_hits.valid;
-		
-	end process ;
-	
-	
-	
-	
-	
-	
-	
-	--mutrig3 frame tx flags:
-	--0b000 Long event transmission
-	--0b001 PRBS transmission, single event
-	--0b010 PRBS transmission, saturating link
-	--0b100 Short event transmission
-	--0b110 Channel event counter data trans
+    end process;
+    
+    proc_output_pkt_hits : process (i_clk)
+    begin 
+        if rising_edge(i_clk) then 
+            if (i_rst = '0') then 
+                -- --------------------------
+                -- sop / eop generation 
+                -- --------------------------
+                -- default 
+                aso_hit_type0_startofpacket     <= '0';
+                aso_hit_type0_endofpacket	    <= '0';
+                if (n_new_word = '1') then
+                    if (to_integer(n_word_cnt) = 1) then -- sop
+                        aso_hit_type0_startofpacket <= '1';
+                    end if;
+                    if (to_integer(n_word_cnt) = to_integer(unsigned(n_frame_len))) then -- eop
+                        aso_hit_type0_endofpacket	<= '1';
+                    end if;
+                end if;
+                -- -----------------------
+                -- derive the hit error
+                -- -----------------------
+                -- default
+                aso_hit_type0_error 			<= (others => '0');
+                hit_err							<= '0';
+                if (p_state = FS_UNPACK or p_state = FS_UNPACK_EXTRA) then -- in receiving hits state
+                    if (asi_rx8b1k_error(1) = '1' or asi_rx8b1k_error(0) = '1') then -- any byte error within the hit
+                        hit_err				<= '1'; -- set hit error
+                    end if;
+                    if (n_new_word = '1') then
+                        aso_hit_type0_error(0) 		<= hit_err; -- latch the hit error based on any byte error
+                        hit_err						<= '0'; -- unset hit error
+                    end if; 
+                end if;
+                -- derive lane_training error, span the whole frame
+                aso_hit_type0_error(2)		<= asi_rx8b1k_error(2);
+                -- derive the crc error
+                if (to_integer(n_word_cnt) = to_integer(unsigned(n_frame_len))) then -- eop
+                    aso_hit_type0_error(1)		<= n_crc_error;
+                end if;
+            else -- reset
+                aso_hit_type0_startofpacket <= '0';
+                aso_hit_type0_endofpacket	<= '0';
+                aso_hit_type0_error 			<= (others => '0');
+                hit_err							<= '0';
+            end if;
+        end if;
+    end process;
+    
+     
+    
+    -- -----------------------------------------------------------
+    -- some plain combinational logic for "frame_rcv" fsm
+    -- -----------------------------------------------------------
+    -- derive the tx flag
+    -- --------------------
     p_txflag_isShort <= '1' when p_frame_flags(4 downto 2) = "100" else '0';
-    p_txflag_isCEC   <= '1' when p_frame_flags(4 downto 2) = "101" else '0';
-
-    o_new_frame     <= p_new_frame;
-    o_frame_number  <= p_frame_number;
-    o_end_of_frame  <= p_end_of_frame;
-
-    -- the latching of the frame_info is done outside
-    -- the frame_flags information will be usefull if it's updated in the beginning of the frame, for the prbs_checker
-    o_frame_info    <= p_frame_flags & p_frame_len;
-    o_crc_err_count <= p_crc_err_count;
-    o_crc_error     <= p_crc_error;
-
-    o_frame_info_ready  <= p_frame_info_ready;
-
-
-    --assemble record for hit data stream
-    -- taking care of the long event word and short event word
-    -- if 48-bit word, send out s_o_word
-    -- if 27-bit word, the data are at highest 27 bits;
-    -- re-arrange the bit:
-    --   put the E_flag ( s_o_word(48-27) ) to bit(0)
-    --   fill the bit( 48-27 downto 1) with '0'
-    --bits not carried in record: T_bad_hit, E_bad_hit, E_fine, E_flag
-    o_hits.asic    <= aso_hit_type0_channel;
-    o_hits.channel <= s_o_word(47 downto 43);
-    o_hits.T_CC    <= s_o_word(41 downto 27);
-    o_hits.T_Fine  <= s_o_word(26 downto 22);
-    o_hits.E_CC    <= s_o_word(20 downto 6) when p_frame_flags(4) = '0' else (others => '0');
-    o_hits.E_Flag  <= s_o_word(21) when p_frame_flags(4) = '0' else s_o_word(0);
-    o_hits.valid   <= p_new_word;
-
+    p_txflag_isCEC   <= '1' when p_frame_flags(4 downto 2) = "101" else '0'; -- not used anywhere
+  
+    -- ==================================================================================================== 
+    -- @moduleName      crc16_calc 
+    -- 
+    -- @berief          calculate the crc for the whole frame, result available at eop
+    -- @input           <n_crc_din_valid> -- data is valid 
+    --                  <i_data> -- crc data to roll
+    -- @output          <s_crc_result> -- the crc output register pack
+    -- ==================================================================================================== 
     u_crc16 : entity work.crc16_calc
     port map (
-        i_clk       => i_clk,
-        i_rst       => n_crc_rst,
-        i_d_valid   => n_crc_din_valid,
-        i_din       => i_data,
-        o_crc_reg   => s_crc_result,
-        o_crc_8     => open--,
+    --  <port>          <signal>            <width>         
+        i_clk           => i_clk,           -- 1 bit
+        i_rst           => n_crc_rst,       -- 1 bit
+        i_d_valid       => n_crc_din_valid, -- 1 bit
+        i_din           => i_data,          -- 8 bits
+        o_crc_reg       => s_crc_result,    -- 16 bits 
+        o_crc_8         => open             -- 8 bits
     );
-
-    syn : process(i_clk)
+    
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    -- @blockName       frame_rcv 
+    --
+    -- @berief          parse the MuTRiG frame
+    -- @input           
+    -- @output          <o_hits.*> -- output hits structure, also called "event"
+    --                  <aso_hit_type0_*> -- hit_type0 streaming interface signals
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    proc_frame_rcv : process (i_clk)
     begin
         if rising_edge(i_clk) then
-            if i_rst = '1' then
-                p_state             <= FS_IDLE;
-                p_crc_err_count     <= (others => '0');
+            -- -----------------
+            -- critical reset
+            -- -----------------
+            if (i_rst = '1' or run_state_cmd = RUN_PREPARE) then
+                p_state             <= FS_IDLE; -- in this state most things will be reset
                 p_frame_number      <= (others => '0');
+                p_crc_err_count     <= (others => '0');
             else
-                p_state             <= n_state;
-                p_state_wait_cnt    <= n_state_wait_cnt;
-
-                p_word              <= n_word;
-                p_word_extra        <= n_word_extra;
-                p_new_word          <= n_new_word;
-
-                p_new_frame         <= n_new_frame;
-                p_frame_number      <= n_frame_number;
-                p_frame_len         <= n_frame_len;
-                p_frame_flags       <= n_frame_flags;
-
+                -- state signals --                         <reset trigger>
+                p_state             <= n_state;             -- i_rst | run_state_cmd.RUN_PREPARE
+                p_state_wait_cnt    <= n_state_wait_cnt;    -- p_state.FS_IDLE
+                -- state counters --
+                p_word              <= n_word;              -- p_state.FS_IDLE
+                p_word_extra        <= n_word_extra;        -- p_state.FS_IDLE, TODO: re-check it
+                p_new_word          <= n_new_word;          -- *not used 
+                -- header info registers --
+                p_new_frame         <= n_new_frame;         -- p_state.FS_IDLE
+                p_frame_number      <= n_frame_number;      -- i_rst | run_state_cmd.RUN_PREPARE
+                p_frame_len         <= n_frame_len;         -- p_state.FS_IDLE
+                p_frame_flags       <= n_frame_flags;       -- p_state.FS_IDLE
+                -- miscellaneous registers --
                 p_word_cnt          <= n_word_cnt;
-                p_crc_err_count     <= n_crc_err_count;
-                p_crc_din_valid     <= n_crc_din_valid;
-                p_crc_rst           <= n_crc_rst;
-                p_crc_error         <= n_crc_error;
-                p_end_of_frame      <= n_end_of_frame;
-                p_frame_info_ready  <= n_frame_info_ready;
-				-- SOP/EOP generation
+                p_crc_err_count     <= n_crc_err_count;     -- i_rst | run_state_cmd.RUN_PREPARE
+                p_crc_din_valid     <= n_crc_din_valid;     -- p_state.FS_IDLE
+                p_crc_rst           <= n_crc_rst;           -- p_state.FS_IDLE (high)
+                p_crc_error         <= n_crc_error;         -- *default to zero
+                p_end_of_frame      <= n_end_of_frame;      -- *default to zero
+                p_frame_info_ready  <= n_frame_info_ready;  -- p_state.FS_IDLE
+                -- indicator --
                 if n_new_word = '1' then
                     s_o_word <= n_word; -- latch the new word (maybe a bit unnecessary to choose a specific time point)
-					if (to_integer(n_word_cnt) = 1) then -- sop
-						aso_hit_type0_startofpacket <= '1';
-					else
-						aso_hit_type0_startofpacket <= '0';
-					end if;
-					if (to_integer(n_word_cnt) = to_integer(unsigned(n_frame_len))) then -- eop
-						aso_hit_type0_endofpacket	<= '1';
-					else
-						aso_hit_type0_endofpacket	<= '0';
-					end if;
-				else
-					aso_hit_type0_startofpacket <= '0';
-					aso_hit_type0_endofpacket	<= '0';
                 end if;
             end if;
-			-- derive the hit error
-			if (p_state = FS_UNPACK or p_state = FS_UNPACK_EXTRA) then -- in receiving hits state
-				if (n_new_word = '1') then
-					aso_hit_type0_error(0) 		<= hit_err; -- latch the hit error based on any byte error
-					hit_err						<= '0'; -- unset hit error
-				end if;
-				if (asi_rx8b1k_error(2) = '1' or asi_rx8b1k_error(1) = '1') then -- any byte error within the hit
-					hit_err				<= '1'; -- set hit error
-				end if;
-			else
-				aso_hit_type0_error(0) 			<= '0';
-				hit_err							<= '0';
-			end if;
-			-- derive lane_training error, span the whole frame
-			aso_hit_type0_error(2)		<= asi_rx8b1k_error(0);
-			-- derive the crc error, TODO: fix it to the eop/last hit
-			aso_hit_type0_error(1)		<= n_crc_error;
+            
 			
         end if;
     end process;
 	
 
-	
-
-
-    comb : process(
-        i_data, i_byteisk,
-        p_state, p_state_wait_cnt, p_crc_err_count, p_crc_din_valid, p_word_cnt, p_new_frame, p_frame_number, p_frame_len,
-        n_word_cnt, s_crc_result, p_word, p_word_extra, p_crc_rst, enable, p_frame_flags, p_txflag_isShort
-    ) -- !!!!!!!!! MISSING SENSITIVITY LIST "p_txflag_isShort" TODO change to all
+    proc_frame_rcv_comb : process(all)
+--        i_data, i_byteisk,
+--        p_state, p_state_wait_cnt, p_crc_err_count, p_crc_din_valid, p_word_cnt, p_new_frame, p_frame_number, p_frame_len,
+--        n_word_cnt, s_crc_result, p_word, p_word_extra, p_crc_rst, enable, p_frame_flags, p_txflag_isShort
+--    ) -- !!!!!!!!! MISSING SENSITIVITY LIST "p_txflag_isShort" TODO change to all
     begin
         --DEFAULT SIGNAL ASSIGNMENTS
         o_busy              <= '1';
@@ -516,7 +672,22 @@ begin
 		eop_comb			<= '0';
 
         if ( i_byteisk = '1' and i_data = x"BC" ) then
-            --
+            -- ---------------------------------------
+            -- YW: restore to idle in the next cycle
+            -- ---------------------------------------
+            -- NOTE:    this is not a valid condition to happen during a frame transmission
+            --          you must capture the exception yourself
+            -- --------------
+            -- "IDLE" mode
+            -- --------------
+            if (MODE_HALT = 0) then
+                n_state         <= FS_IDLE;
+            else
+            -- --------------
+            -- "HALT" mode
+            -- --------------
+                -- halt
+            end if;
         else
             case p_state is
             when FS_IDLE =>
@@ -531,6 +702,8 @@ begin
                 n_crc_din_valid  <= '0';
                 n_crc_rst        <= '1';
                 n_new_frame      <= '0';
+                
+                n_word_extra     <= (others => '0');
 
                 --state transition
                 -- detect frame_header, go to FS_FRAME_COUNTER
@@ -575,7 +748,9 @@ begin
                 end if;
 
             when FS_UNPACK => -- 3 cycles
-                 -- {normal mode}
+                -- ------------------
+                -- normal mode
+                -- ------------------
                 if ( p_txflag_isShort = '0' ) then
 					-- collect 6 bytes data of all hits
                     n_word(p_state_wait_cnt*8-1 downto (p_state_wait_cnt-1)*8) <= i_data;
@@ -591,8 +766,10 @@ begin
 							n_word_cnt          <= p_word_cnt + 1; -- YW: need for gen eop
                         end if;
                     end if;
-                 -- {fast mode}
-				 -- bang-bang between UNPACK_EXTRA and UNPACK state for even and odd number of hits in short mode
+                -- ------------------
+                -- fast mode
+                -- ------------------
+				-- bang-bang between UNPACK_EXTRA and UNPACK state for even and odd number of hits in short mode
                 else
                     n_state_wait_cnt <= p_state_wait_cnt - 1;
                     if ( p_word_cnt(0) = '0' ) then -- current is even number of hits
@@ -665,23 +842,41 @@ begin
                     n_crc_err_count <= std_logic_vector(unsigned(p_crc_err_count)+1);
                     n_crc_error <= '1';
                 end if;
+                
                 n_state <= FS_IDLE;
         --  end if;
 
             when others => null;
-
         end case;
         end if;
     end process;
-	
+    
+    -- ==================================================================================================== 
+	-- @commentName     Mu3e "Run Control" host-agent (h2a) handshake 
+    --
+    -- @comment             In mu3e run control system, each feb has a run control management host which runs 
+    --                  in reset clock domain, while other IPs must feature run control management agent 
+    --                  which listens the run state command to capture the transition. The state transition
+    --                  are only ack by the agent for as little as 1 cycle, but the host must assert the 
+    --                  valid until all ack by the agents are received, during transitioning period. 
+	--                      The host should record the timestamps (clock cycle and phase) difference between
+    --                  the run command signal is received by its lvds_rx and agents' ready signal. 
+    --                      This should ensure all agents are running at the same time, despite there is 
+    --                  phase uncertainty between the clocks, which might results in 1 clock cycle 
+    --                  difference and should be compensated offline. 
+	-- ====================================================================================================
+    
+    
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    -- @blockName       run_control_mgmt_agent 
+    --
+    -- @berief          handshake with run control host and change its state
+    -- @input           <asi_ctrl_valid/data> -- run command sent by host
+    -- @output          <run_state_cmd> -- decoded run command 
+    --                  <asi_ctrl_ready> -- handshake with host
+    --                  <receiver_force_go/receiver_go> -- control signals to "frame_rcv"
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	proc_run_control_mgmt_agent : process (i_clk,i_rst)
-	-- In mu3e run control system, each feb has a run control management host which runs in reset clock domain, while other IPs must feature
-	-- run control management agent which listens the run state command to capture the transition.
-	-- The state transition are only ack by the agent for as little as 1 cycle, but the host must assert the valid until all ack by the agents are received,
-	-- during transitioning period. 
-	-- The host should record the timestamps (clock cycle and phase) difference between the run command signal is received by its lvds_rx and 
-	-- agents' ready signal. This should ensure all agents are running at the same time, despite there is phase uncertainty between the clocks, which 
-	-- might results in 1 clock cycle difference and should be compensated offline. 
 	begin
 		if (i_rst = '1') then 
 			receiver_force_go		<= '0';
@@ -717,7 +912,7 @@ begin
 				run_state_cmd		<= run_state_cmd;
 			end if;
 			-- ready
-				asi_ctrl_ready		<= '1';
+			asi_ctrl_ready		<= '1';
 			
 			-- run control mgmt fsm 
 			case run_state_cmd is 
