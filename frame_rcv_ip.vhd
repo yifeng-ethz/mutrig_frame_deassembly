@@ -235,7 +235,9 @@ architecture rtl of frame_rcv_ip is
 		-- "running" is generate new frame, "idle" is finishing current frame and do not generate new frame
 		-- "set to run" is enable, "set to stop" is enable_n (do not generate new frame). 
 		-- exception to be implemented
-        frame_counter   : std_logic_vector(31 downto 0);
+        frame_counter       : std_logic_vector(31 downto 0);
+        frame_counter_tail  : std_logic_vector(31 downto 0);
+        frame_counter_head  : std_logic_vector(31 downto 0);
         crc_err_counter : std_logic_vector(31 downto 0);
 	end record;
 	signal csr 		: csr_t;
@@ -376,8 +378,28 @@ begin
                 -- default
                 avs_csr_readdata			<= (others => '0');
                 avs_csr_waitrequest		    <= '1';
-                if (p_state = FS_CRC_CHECK) then 
-                    csr.frame_counter       <= std_logic_vector(unsigned(csr.frame_counter) + 1);
+                -- ---------------
+                -- routine 
+                -- ---------------
+                -- head
+                if (aso_hit_type0_startofpacket = '1') then 
+                    csr.frame_counter_head          <= std_logic_vector(unsigned(csr.frame_counter_head) + 1);
+                end if;
+                
+                -- tail
+                if (aso_hit_type0_endofpacket = '1') then 
+                    csr.frame_counter_tail          <= std_logic_vector(unsigned(csr.frame_counter_tail) + 1);
+                end if; 
+                
+                -- head - tail = bad frame count, calculated at eop
+                if (aso_hit_type0_endofpacket = '1') then 
+                    csr.frame_counter               <= std_logic_vector(unsigned(csr.frame_counter_head) - unsigned(csr.frame_counter_tail));
+                end if; 
+                
+                -- runctl reset
+                if (run_state_cmd = RUN_PREPARE) then 
+                    csr.frame_counter_head          <= (others => '0');
+                    csr.frame_counter_tail          <= (others => '0');
                 end if;
                 -- ------------------
                 -- avalon read
@@ -415,11 +437,13 @@ begin
                     end if;
                 end if;
             else 
-                csr.control		    <= (0 => '1', others => '0');
-                csr.status		    <= (others => '0');
-                csr.crc_err_counter	<= (others => '0');
-                csr.frame_counter   <= (others => '0');
-                avs_csr_waitrequest	<= '0'; -- release the bus
+                csr.control		                <= (0 => '1', others => '0');
+                csr.status		                <= (others => '0');
+                csr.crc_err_counter	            <= (others => '0');
+                csr.frame_counter               <= (others => '0');
+                csr.frame_counter_head          <= (others => '0');
+                csr.frame_counter_tail          <= (others => '0');
+                avs_csr_waitrequest	            <= '0'; -- release the bus
             end if;
 		end if;
 
