@@ -1,0 +1,53 @@
+-- File name: ordered_packet_scheduler.vhd 
+-- Author: Yifeng Wang (yifenwan@phys.ethz.ch)
+-- =======================================
+-- Revision: 1.0 (file created)
+--		Date: May 26, 2025
+-- =========
+-- Description:	[Ordered Packet Scheduler] 
+--		This IP schedules incoming packets from multiple lanes in a strongly order sequence, ranked by their timestamps.
+--      The scheduling is non-work-conserving, such that deficit of a smallest lane will block scheduling.
+--      Without backpressurring upstream, when its input FIFO is full, the scheduler will drop packet at its ingress port. 
+--      The upstream will provide a packet timestamp range from 0 to 255 with each lane modolo by 4.
+--      The sheduler must select the smallest timestamp packet of all lanes.
+--      In case of timestamp turnover or overflow, the frame is finished. it will ignore this lane and continue to exhaust other lanes. 
+--      On the other hand, to record overflow of timestamps, a frame table is deployed, which keeps track of 3 things
+--          - finished (FIN), the frame is finished, regardless of loaded or not.
+--          - timestamp (TS), the timestamp of this frame. (ts[47:12]) 
+--          - count (CNT), the number of packet within this frame. 
+--
+-- Tautology: 
+--      subframe:       subheader + data (hit events). variable length. is a packet.
+--      frame:          fixed 256 subframes, unless some skipped. variable length. is a packet.
+--      sfifo:          subframe fifo. L0. stores the lane subframe packets.
+--      frame table:    records framing info. each entry consists of FIN, TS and CNT. 
+--      mfifo:          main frame fifo. L1. stores the integrals of Mu3e Data Frame. fully ready to be dispatched by upload subsystem.
+--
+-- Architecture:
+--      L0
+--      --------------------------------
+--      ingress cdc fifo:               translates data between data plane clock (125 MHz) and upload subsystem clock (156.25 MHz)
+--      L0 write requester:             request to write 
+--      L0 write granter:               grant the request, if not full. evict the whole running packet once full. 
+--      frame table recorder:           manage the frame table - keep track of ts, written subframe and completion.
+--
+--      L0 <-> L1
+--      L1 write requester:             post ticket, e.g. subheader timestamp, to win arbitration
+--      L1 write granter:               grant the request, based on smallest timestamp. ignore the frame if "frame_complete" flag is given.
+--      
+-- Interface:
+--      Between requester and granter
+--      --------------------------------
+--      control port:                   send control ticket. for example, L0: empty, L1: subheader timestamp + "frame_complete".
+--      data port:                      send data if the control ticket is 
+--
+--
+--		
+-- Output logic:
+--	    Pack smallest ts sub-frames in order to form a complete frame, store-and-forware.
+--	    Issue 'ready' to win the arbitration against slow control packet. 
+--			
+
+-- ================ synthsizer configuration =================== 		
+-- altera vhdl_input_version vhdl_2008
+-- ============================================================= 

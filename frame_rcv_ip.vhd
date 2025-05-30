@@ -571,11 +571,12 @@ begin
                     end if; 
                 end if;
                 -- derive lane_training error, span the whole frame
-                aso_hit_type0_error(2)		<= asi_rx8b1k_error(2);
+                aso_hit_type0_error(2)		    <= asi_rx8b1k_error(2);
                 -- derive the crc error
                 if (to_integer(n_word_cnt) = to_integer(unsigned(n_frame_len))) then -- eop
                     aso_hit_type0_error(1)		<= n_crc_error;
                 end if;
+
             else -- reset
                 aso_hit_type0_startofpacket <= '0';
                 aso_hit_type0_endofpacket	<= '0';
