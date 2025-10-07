@@ -19,8 +19,9 @@
 -- Revision 0.01 - File Created
 -- Revision 1.00 - adpated to MuTRiG frame structure
 -- Revision 1.10 - KB: Preparations for datapath_v2: Use record types, conversion of data depending on hit type
--- Revision 1.20 - Yifeng Wang: Adaptations/wrapping for IP packaging. (support stream data and avmm config)
--- Revision 1.21 - YW: correct the sop/eop to the first/last hit valid cycles. 
+-- Revision 1.20 - YW: Adaptations/wrapping for IP packaging. (support stream data and avmm config)
+-- Revision 1.21 - YW: Corrected the sop/eop to the first/last hit valid cycles. 
+-- Revision 1.30 - YW: Fixed E-Flag field as the name suggests. The field was E-BadHit. Move T/E-BadHit to aso_error(0).
 
 -- Additional Comments:
 --      IP wrapper layer: 
@@ -125,13 +126,16 @@ architecture rtl of frame_rcv_ip is
 	-- ==================================================================
     constant len_hit_presort : natural := 4 + 5 + 15 + 5 + 15 + 1 + 1; -- 46 bits (1bit for valid)
     type t_hit_presort is record
-        asic            : std_logic_vector(3 downto 0);  --ASIC ID
-        channel         : std_logic_vector(4 downto 0);  --Channel number
-        T_CC            : std_logic_vector(14 downto 0); --T-Trigger coarse time value (1.6ns)
-        T_Fine          : std_logic_vector(4 downto 0);  --T-Trigger fine time value
-        E_CC            : std_logic_vector(14 downto 0); --Energy coarse time value (in units of 1.6ns)
-        E_Flag          : std_logic;                     --E-Flag valid flag
-        valid           : std_logic;                     --data word valid flag
+        asic            : std_logic_vector(3 downto 0);  -- ASIC ID
+        channel         : std_logic_vector(4 downto 0);  -- Channel number
+        T_CC            : std_logic_vector(14 downto 0); -- T-Trigger coarse time value (1.6ns)
+        T_Fine          : std_logic_vector(4 downto 0);  -- T-Trigger fine time value
+        T_BadHit        : std_logic;                     -- indicates CC is has bubble
+        E_CC            : std_logic_vector(14 downto 0); -- Energy coarse time value (in units of 1.6ns)
+        E_fine          : std_logic_vector(4 downto 0);
+        E_BadHit        : std_logic;
+        E_Flag          : std_logic;                     -- E-Flag valid flag
+        valid           : std_logic;                     -- data word valid flag
 		hiterr			: std_logic;
     end record;
     --type t_v_hit_presort is array (natural range <>) of t_hit_presort;
@@ -506,18 +510,23 @@ begin
         --              re-arrange the bit:
         --                      put the E_flag ( s_o_word(48-27) ) to bit(0)
         --                      fill the bit( 48-27 downto 1) with '0'
-        --              bits not carried in record: 
-        --                      T_bad_hit, E_bad_hit, E_fine, E_flag
-        o_hits.asic    <= asi_rx8b1k_channel;
-        o_hits.channel <= s_o_word(47 downto 43);
-        o_hits.T_CC    <= s_o_word(41 downto 27);
-        o_hits.T_Fine  <= s_o_word(26 downto 22);
+        --              bits not carried in record: (note: no longer true)
+        --                      T_bad_hit, E_bad_hit, E_fine
+        o_hits.asic     <= asi_rx8b1k_channel;
+        o_hits.channel  <= s_o_word(47 downto 43);
+        o_hits.T_BadHit <= s_o_word(42);
+        o_hits.T_CC     <= s_o_word(41 downto 27);
+        o_hits.T_Fine   <= s_o_word(26 downto 22);
         case p_frame_flags(4) is 
             when '0' =>
+                o_hits.E_BadHit <= s_o_word(21);
                 o_hits.E_CC     <= s_o_word(20 downto 6);
-                o_hits.E_Flag   <= s_o_word(21);
+                o_hits.E_fine   <= s_o_word(5 downto 1);
+                o_hits.E_Flag   <= s_o_word(0);
             when others => 
+                o_hits.E_BadHit <= '0';
                 o_hits.E_CC     <= (others => '0');
+                o_hits.E_fine   <= (others => '0');
                 o_hits.E_Flag   <= s_o_word(0);
         end case;
         o_hits.valid   <= p_new_word;
@@ -567,6 +576,9 @@ begin
                     end if;
                     if (n_new_word = '1') then
                         aso_hit_type0_error(0) 		<= hit_err; -- latch the hit error based on any byte error
+                        if (o_hits.E_BadHit = '1' or o_hits.T_BadHit = '1') then 
+                            aso_hit_type0_error(0)      <= '1'; -- raise error-0 when CC has bubble. note: you may choose to not trim it, but it is rather rarely, only if the hitlogic has glitches.
+                        end if;
                         hit_err						<= '0'; -- unset hit error
                     end if; 
                 end if;

@@ -1,9 +1,11 @@
 
 
 ################################################
-# mutrig_frame_assembly "MuTRiG Frame Deassembly " v24.0.1021
+# mutrig_frame_assembly "MuTRiG Frame Deassembly " 
 # Yifeng Wang 2024.10.21
 # Deassemble the MuTRiG frame from lvds receiver byte stream into header, data and trailer (with crc checks). 
+#
+# 25.0.0925 - Fixed E-Flag field as the name suggests. The field was E-BadHit. Move T/E-BadHit to aso_error(0).
 ################################################
 
 ################################################
@@ -17,7 +19,7 @@ package require -exact qsys 16.1
 ################################################ 
 set_module_property DESCRIPTION "Deassemble the MuTRiG frame from lvds receiver byte stream into header, data and trailer (with crc checks)"
 set_module_property NAME mutrig_frame_deassembly
-set_module_property VERSION 24.0.1021
+set_module_property VERSION 25.0.0925
 set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
 set_module_property GROUP "Mu3e Data Plane/Modules"
