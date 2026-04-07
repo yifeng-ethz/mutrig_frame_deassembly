@@ -6,6 +6,7 @@
 # Deassemble the MuTRiG frame from lvds receiver byte stream into header, data and trailer (with crc checks). 
 #
 # 25.0.0925 - Fixed E-Flag field as the name suggests. The field was E-BadHit. Move T/E-BadHit to aso_error(0).
+# 26.0.0402 - align catalog version with feb_system_v2 generated system
 ################################################
 
 ################################################
@@ -19,7 +20,7 @@ package require -exact qsys 16.1
 ################################################ 
 set_module_property DESCRIPTION "Deassemble the MuTRiG frame from lvds receiver byte stream into header, data and trailer (with crc checks)"
 set_module_property NAME mutrig_frame_deassembly
-set_module_property VERSION 25.0.0925
+set_module_property VERSION 26.0.402
 set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
 set_module_property GROUP "Mu3e Data Plane/Modules"
@@ -329,4 +330,3 @@ proc myelaborate {} {
     
     return -code ok
 }
-
