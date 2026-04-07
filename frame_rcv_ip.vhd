@@ -22,6 +22,7 @@
 -- Revision 1.20 - YW: Adaptations/wrapping for IP packaging. (support stream data and avmm config)
 -- Revision 1.21 - YW: Corrected the sop/eop to the first/last hit valid cycles. 
 -- Revision 1.30 - YW: Fixed E-Flag field as the name suggests. The field was E-BadHit. Move T/E-BadHit to aso_error(0).
+-- Revision 1.31 - YW: Correct long-hit compaction to drop only E_BadHit and E_fine.
 
 -- Additional Comments:
 --      IP wrapper layer: 
@@ -519,10 +520,13 @@ begin
         o_hits.T_Fine   <= s_o_word(26 downto 22);
         case p_frame_flags(4) is 
             when '0' =>
+                -- Long-mode raw word keeps E_BadHit at bit 21, E_Flag at bit 20,
+                -- ECC at bits 19:5, and E_fine at bits 4:0. hit_type0 carries
+                -- only {ECC, E_Flag}, so compact from the raw word explicitly.
                 o_hits.E_BadHit <= s_o_word(21);
-                o_hits.E_CC     <= s_o_word(20 downto 6);
-                o_hits.E_fine   <= s_o_word(5 downto 1);
-                o_hits.E_Flag   <= s_o_word(0);
+                o_hits.E_CC     <= s_o_word(19 downto 5);
+                o_hits.E_fine   <= s_o_word(4 downto 0);
+                o_hits.E_Flag   <= s_o_word(20);
             when others => 
                 o_hits.E_BadHit <= '0';
                 o_hits.E_CC     <= (others => '0');
