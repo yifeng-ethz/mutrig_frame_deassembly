@@ -23,6 +23,11 @@
 -- Revision 1.21 - YW: Corrected the sop/eop to the first/last hit valid cycles. 
 -- Revision 1.30 - YW: Fixed E-Flag field as the name suggests. The field was E-BadHit. Move T/E-BadHit to aso_error(0).
 -- Revision 1.31 - YW: Correct long-hit compaction to drop only E_BadHit and E_fine.
+-- Revision 1.33 - YW: Keep header detection alive during TERMINATING so delayed final drain frames are parsed.
+-- Version : 26.0.2
+-- Date    : 20260416
+-- Change  : Allow terminating drain frames on the physical 8b/10b input to enter the parser without reopening
+--           non-terminating run states.
 
 -- Additional Comments:
 --      IP wrapper layer: 
@@ -472,9 +477,9 @@ begin
 		if (i_rst = '1' ) then 
 			enable			<= '0'; -- default is disable
 		elsif rising_edge(i_clk) then
-			if (receiver_force_go = '1') then -- need to ignore mask during idle, for monitoring rate.
+			if (receiver_force_go = '1') then
 				enable 			<= '1';
-			elsif (receiver_go = '1') then -- allow to go in running state.
+			elsif (receiver_go = '1' or run_state_cmd = TERMINATING) then -- allow the terminating drain frame to start.
 				if (csr.control(0) = '1') then   -- not masked
 					enable			<= '1';
 				else
