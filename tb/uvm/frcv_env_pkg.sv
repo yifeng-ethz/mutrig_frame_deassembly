@@ -1380,6 +1380,16 @@ package frcv_env_pkg;
       drive_symbol(1'b0, 8'h00);
     endtask
 
+    task automatic send_empty_frame(int unsigned frame_number);
+      drive_symbol(1'b1, HEADER_BYTE);
+      drive_symbol(1'b0, byte'(frame_number[15:8]));
+      drive_symbol(1'b0, byte'(frame_number[7:0]));
+      drive_symbol(1'b0, 8'h00);
+      drive_symbol(1'b0, 8'h00);
+      drive_symbol(1'b0, 8'h00);
+      drive_symbol(1'b0, 8'h00);
+    endtask
+
     task automatic wait_for_counts(int unsigned exp_hits,
                                    int unsigned exp_real_eops,
                                    int unsigned exp_headers,
@@ -1536,10 +1546,12 @@ package frcv_env_pkg;
           if (ctrl_vif.ready !== 1'b0)
             `uvm_fatal("FRCV_TEST", "Delayed terminating tail must hold ctrl_ready low before the late frame arrives")
           send_long_frame(16'h0003, DELAYED_TAIL_HIT_WORD);
+          wait_cycles(16);
+          send_empty_frame(16'h0004);
         end
       join
 
-      wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, TERMINATE_WAIT_MAX_CYCLES,
+      wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 2, TERMINATE_WAIT_MAX_CYCLES,
         "Delayed-tail TERMINATING drain");
       wait_for_endofrun_count(base_endofruns + 1, TERMINATE_WAIT_MAX_CYCLES,
         "Delayed-tail TERMINATING end-of-run marker");
@@ -1566,6 +1578,8 @@ package frcv_env_pkg;
             drive_symbol(1'b0, byte'(ACTIVE_HIT_WORD[byte_idx*8 +: 8]));
           drive_symbol(1'b0, 8'h00);
           drive_symbol(1'b0, 8'h00);
+          wait_cycles(16);
+          send_empty_frame(16'h0004);
         end
       join
 

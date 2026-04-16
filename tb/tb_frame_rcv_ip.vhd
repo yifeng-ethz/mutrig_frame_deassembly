@@ -125,6 +125,23 @@ architecture sim of tb_frame_rcv_ip is
         drive_symbol(clk, rx_data, rx_valid, rx_error, '0', 0);
     end procedure send_long_frame;
 
+    procedure send_empty_frame(
+        signal clk                 : in  std_logic;
+        signal rx_data             : out std_logic_vector(8 downto 0);
+        signal rx_valid            : out std_logic;
+        signal rx_error            : out std_logic_vector(2 downto 0);
+        constant frame_number      : in  natural
+    ) is
+    begin
+        drive_symbol(clk, rx_data, rx_valid, rx_error, '1', HEADER_BYTE_CONST);
+        drive_symbol(clk, rx_data, rx_valid, rx_error, '0', frame_number / 256);
+        drive_symbol(clk, rx_data, rx_valid, rx_error, '0', frame_number mod 256);
+        drive_symbol(clk, rx_data, rx_valid, rx_error, '0', 0);
+        drive_symbol(clk, rx_data, rx_valid, rx_error, '0', 0);
+        drive_symbol(clk, rx_data, rx_valid, rx_error, '0', 0);
+        drive_symbol(clk, rx_data, rx_valid, rx_error, '0', 0);
+    end procedure send_empty_frame;
+
 begin
 
     i_clk <= not i_clk after CLK_PERIOD_CONST / 2;
@@ -278,6 +295,8 @@ begin
             report "Delayed terminating tail must hold ctrl_ready low while waiting for the late final frame"
             severity failure;
         send_long_frame(i_clk, asi_rx8b1k_data, asi_rx8b1k_valid, asi_rx8b1k_error, 3, DELAYED_TAIL_HIT_WORD_CONST);
+        wait_cycles(i_clk, 16);
+        send_empty_frame(i_clk, asi_rx8b1k_data, asi_rx8b1k_valid, asi_rx8b1k_error, 4);
 
         ready_seen      := false;
         active_eop_seen := false;
@@ -307,8 +326,8 @@ begin
         assert hit_eop_count = base_hit_eops + 1
             report "Delayed terminating tail should complete with the real frame EOP"
             severity failure;
-        assert headerinfo_count = base_headerinfo + 1
-            report "Delayed terminating tail should still emit headerinfo for the late final frame"
+        assert headerinfo_count = base_headerinfo + 2
+            report "Delayed terminating tail should emit headerinfo for both the late final frame and the terminating empty fence frame"
             severity failure;
         assert endofrun_seen
             report "Delayed terminating tail should emit exactly one hit_type0_endofrun pulse after the late final frame"
@@ -346,6 +365,8 @@ begin
         end loop;
         drive_symbol(i_clk, asi_rx8b1k_data, asi_rx8b1k_valid, asi_rx8b1k_error, '0', 0);
         drive_symbol(i_clk, asi_rx8b1k_data, asi_rx8b1k_valid, asi_rx8b1k_error, '0', 0);
+        wait_cycles(i_clk, 16);
+        send_empty_frame(i_clk, asi_rx8b1k_data, asi_rx8b1k_valid, asi_rx8b1k_error, 4);
 
         ready_seen      := false;
         active_eop_seen := false;

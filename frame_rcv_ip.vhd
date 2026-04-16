@@ -26,10 +26,11 @@
 -- Revision 1.33 - YW: Keep header detection alive during TERMINATING so delayed final drain frames are parsed.
 -- Revision 1.34 - YW: Replace synthetic idle EOP with a dedicated end-of-run pulse after the final drain frame.
 -- Revision 1.35 - YW: Guard TERMINATING idle-close until the upstream byte lane stays quiet long enough for a delayed final frame.
--- Version : 26.0.4
+-- Revision 1.36 - YW: Close TERMINATING on the first empty frame and keep the idle guard only as a fallback.
+-- Version : 26.0.5
 -- Date    : 20260416
--- Change  : Delay the dedicated hit_type0_endofrun pulse until TERMINATING sees a sustained quiet window,
---           so a late final MuTRiG frame cannot arrive after downstream already closed the run.
+-- Change  : Treat the first empty MuTRiG frame in TERMINATING as the per-run close fence so periodic idle frames
+--           do not block hit_type0_endofrun, while retaining the quiet-window fallback for benches without them.
 
 -- Additional Comments:
 --      IP wrapper layer: 
@@ -241,6 +242,8 @@ architecture rtl of frame_rcv_ip is
 	signal terminating_pending			: std_logic;
 	signal terminating_endofrun_pulse	: std_logic;
 	signal terminating_idle_guard_cnt	: natural range 0 to TERMINATING_IDLE_GUARD_CONST;
+	signal terminating_empty_frame_done : std_logic;
+	signal terminating_frame_start_seen : std_logic;
 	signal ctrl_ready_comb				: std_logic;
     
     -- //////////////////////////////////////////////////
@@ -264,6 +267,12 @@ begin
 
 	aso_hit_type0_endofrun <= terminating_endofrun_pulse;
 	asi_ctrl_ready <= ctrl_ready_comb;
+	terminating_frame_start_seen <= '1' when (
+		p_state = FS_IDLE and enable = '1' and i_byteisk = '1' and i_data = c_header
+	) else '0';
+	terminating_empty_frame_done <= '1' when (
+		run_state_cmd = TERMINATING and p_state = FS_CRC_CHECK and unsigned(p_frame_len) = 0
+	) else '0';
 	ctrl_ready_comb <= '0' when i_rst = '1' else
 	                  '1' when (
 	                      ((run_state_cmd = IDLE) or (run_state_cmd = RUN_PREPARE) or (run_state_cmd = SYNC))
@@ -501,10 +510,13 @@ begin
 		enable <= '0';
 		if (receiver_force_go = '1') then
 			enable <= '1';
-		elsif ((receiver_go = '1' or run_state_cmd = TERMINATING) and csr.control(0) = '1') then
-			-- Drop frame-start permission immediately after a non-running
-			-- control word is accepted while still allowing the terminating
-			-- tail frame to start.
+		elsif (receiver_go = '1' and csr.control(0) = '1') then
+			enable <= '1';
+		elsif (run_state_cmd = TERMINATING and terminating_pending = '1' and csr.control(0) = '1') then
+			-- During TERMINATING, keep frame-start permission only until the
+			-- first empty frame closes the run. This still allows a delayed
+			-- final payload frame to start, but stops parsing fresh idle frames
+			-- once the run-local close marker has been emitted.
 			enable <= '1';
 		end if;
 	end process proc_enable_ctrl;
@@ -990,7 +1002,11 @@ begin
 				terminating_pending <= '1';
 				terminating_idle_guard_cnt <= 0;
 			elsif (terminating_pending = '1') then
-				if (p_state /= FS_IDLE or asi_rx8b1k_valid = '1') then
+				if (terminating_empty_frame_done = '1') then
+					terminating_pending <= '0';
+					terminating_idle_guard_cnt <= TERMINATING_IDLE_GUARD_CONST;
+					terminating_endofrun_pulse <= '1';
+				elsif (p_state /= FS_IDLE or terminating_frame_start_seen = '1') then
 					terminating_idle_guard_cnt <= 0;
 				elsif (terminating_idle_guard_cnt >= TERMINATING_IDLE_GUARD_CONST - 1) then
 					terminating_pending <= '0';
