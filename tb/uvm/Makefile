@@ -15,8 +15,6 @@ export MGLS_LICENSE_FILE := $(LM_LICENSE_FILE)
 
 UVM_DIR       := $(abspath .)
 IP_SRC        := $(abspath ../..)
-WORK_DIR      = $(UVM_DIR)/work_$(RTL_VARIANT)
-BUILD_DIR     = $(WORK_DIR)/build
 LOG_DIR       := $(UVM_DIR)/logs
 COV_DIR       = $(UVM_DIR)/cov_$(RTL_VARIANT)
 UVM_HOME      ?= $(abspath $(QUESTA_HOME)/verilog_src/uvm-1.2)
@@ -30,6 +28,13 @@ TEST        ?= COMBO_FRCV_001_run_contract_test
 CASE_ID     ?=
 BUCKET_FRAME_TEST ?= COMBO_FRCV_001_run_contract_test
 ALL_BUCKETS_FRAME_TEST ?= COMBO_FRCV_001_run_contract_test
+CHANNEL_WIDTH ?= 4
+CSR_ADDR_WIDTH ?= 2
+MODE_HALT ?= 0
+DEBUG_LV ?= 0
+BUILD_TAG ?= CFG_A
+EXTRA_PLUSARGS ?=
+RUN_ID_OVERRIDE ?=
 SEED        ?= 1
 VERBOSITY   ?= UVM_MEDIUM
 TB_TOP      := tb_top
@@ -37,7 +42,10 @@ VCOM_COV    ?= -cover bcesft
 VLOG_COV    ?= +cover=bcesft
 
 RTL_SRC = $(if $(filter before,$(RTL_VARIANT)),$(BUILD_DIR)/frame_rcv_ip.vhd,$(IP_SRC)/frame_rcv_ip.vhd)
-RUN_ID  = $(if $(CASE_ID),$(CASE_ID),$(TEST))
+RUN_ID  = $(if $(RUN_ID_OVERRIDE),$(RUN_ID_OVERRIDE),$(if $(CASE_ID),$(CASE_ID),$(TEST)))
+TB_CFG_TAG = cw$(CHANNEL_WIDTH)_aw$(CSR_ADDR_WIDTH)_mh$(MODE_HALT)_dl$(DEBUG_LV)
+WORK_DIR = $(UVM_DIR)/work_$(RTL_VARIANT)_$(TB_CFG_TAG)
+BUILD_DIR = $(WORK_DIR)/build
 
 UVM_SRCS = \
 	$(UVM_DIR)/frcv_if.sv \
@@ -55,7 +63,7 @@ license_check:
 compile: license_check $(WORK_DIR)/.compiled
 
 $(WORK_DIR)/.compiled: $(IP_SRC)/crc16_calc.vhd $(IP_SRC)/frame_rcv_ip.vhd $(UVM_SRCS)
-	@echo "═══ Compiling frame_rcv_ip UVM bench ($(RTL_VARIANT)) ═══"
+	@echo "═══ Compiling frame_rcv_ip UVM bench ($(RTL_VARIANT)) cfg=$(TB_CFG_TAG) build=$(BUILD_TAG) ═══"
 	@rm -rf $(WORK_DIR)
 	@mkdir -p $(WORK_DIR) $(BUILD_DIR) $(LOG_DIR) $(COV_DIR)
 	@if [ "$(RTL_VARIANT)" = "before" ]; then \
@@ -68,6 +76,10 @@ $(WORK_DIR)/.compiled: $(IP_SRC)/crc16_calc.vhd $(IP_SRC)/frame_rcv_ip.vhd $(UVM
 	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini modelsim.ini -work work $(RTL_SRC)
 	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(UVM_DIR)/frcv_if.sv
 	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work -mfcu \
+	  +define+TB_CHANNEL_WIDTH=$(CHANNEL_WIDTH) \
+	  +define+TB_CSR_ADDR_WIDTH=$(CSR_ADDR_WIDTH) \
+	  +define+TB_MODE_HALT=$(MODE_HALT) \
+	  +define+TB_DEBUG_LV=$(DEBUG_LV) \
 	  $(VLOG_COV) +incdir+$(UVM_SRC) +incdir+$(UVM_DIR) -sv \
 	  $(UVM_SRC)/uvm_pkg.sv \
 	  $(UVM_DIR)/frcv_env_pkg.sv \
@@ -77,13 +89,14 @@ $(WORK_DIR)/.compiled: $(IP_SRC)/crc16_calc.vhd $(IP_SRC)/frame_rcv_ip.vhd $(UVM
 run: compile run_sim
 
 run_sim:
-	@echo "=== Running $(RUN_ID) test=$(TEST) variant=$(RTL_VARIANT) seed=$(SEED) ==="
+	@echo "=== Running $(RUN_ID) test=$(TEST) variant=$(RTL_VARIANT) build=$(BUILD_TAG) cfg=$(TB_CFG_TAG) seed=$(SEED) ==="
 	@mkdir -p $(COV_DIR)
 	@rm -f $(COV_DIR)/$(RUN_ID)_s$(SEED).ucdb
 	@cd $(WORK_DIR) && $(VSIM) -modelsimini modelsim.ini -c -coverage \
 	  -dpicpppath $(DPI_CPP) -sv_lib $(UVM_DPI_LIB) \
 	  -sv_seed $(SEED) \
-	  +UVM_TESTNAME=$(TEST) +UVM_VERBOSITY=$(VERBOSITY) $(if $(CASE_ID),+FRCV_CASE_ID=$(CASE_ID),) \
+	  +UVM_TESTNAME=$(TEST) +UVM_VERBOSITY=$(VERBOSITY) \
+	  $(if $(CASE_ID),+FRCV_CASE_ID=$(CASE_ID),) +FRCV_BUILD_TAG=$(BUILD_TAG) $(EXTRA_PLUSARGS) \
 	  -suppress 3009 -suppress 3473 -voptargs="+acc" \
 	  work.$(TB_TOP) \
 	  -do "quietly set NumericStdNoWarnings 1; quietly set StdArithNoWarnings 1; coverage save -onexit $(COV_DIR)/$(RUN_ID)_s$(SEED).ucdb; run -all; quit -f" \

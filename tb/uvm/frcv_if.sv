@@ -4,7 +4,7 @@ interface frcv_rx_if(input logic clk, input logic rst);
   logic [8:0] data;
   logic       valid;
   logic [2:0] error;
-  logic [3:0] channel;
+  logic [7:0] channel;
 
   modport drv (
     output data, valid, error, channel,
@@ -32,7 +32,7 @@ interface frcv_ctrl_if(input logic clk, input logic rst);
 endinterface
 
 interface frcv_csr_if(input logic clk, input logic rst);
-  logic [1:0]  address;
+  logic [7:0]  address;
   logic        read;
   logic        write;
   logic [31:0] writedata;
@@ -50,7 +50,7 @@ interface frcv_csr_if(input logic clk, input logic rst);
 endinterface
 
 interface frcv_out_if(input logic clk, input logic rst);
-  logic [3:0]  hit_channel;
+  logic [7:0]  hit_channel;
   logic        hit_sop;
   logic        hit_eop;
   logic [2:0]  hit_error;
@@ -59,10 +59,40 @@ interface frcv_out_if(input logic clk, input logic rst);
 
   logic [41:0] headerinfo_data;
   logic        headerinfo_valid;
-  logic [3:0]  headerinfo_channel;
+  logic [7:0]  headerinfo_channel;
 
   modport mon (
     input hit_channel, hit_sop, hit_eop, hit_error, hit_data, hit_valid,
           headerinfo_data, headerinfo_valid, headerinfo_channel, clk, rst
+  );
+endinterface
+
+interface frcv_reset_if(input logic clk);
+  logic force_reset;
+
+  modport drv (
+    output force_reset,
+    input  clk
+  );
+
+  modport mon (
+    input force_reset, clk
+  );
+endinterface
+
+interface frcv_dbg_if(input logic clk, input logic rst);
+  logic        enable;
+  logic        receiver_go;
+  logic        receiver_force_go;
+  logic        terminating_pending;
+  logic [31:0] crc_err_counter;
+  logic [31:0] frame_counter;
+  logic [31:0] frame_counter_head;
+  logic [31:0] frame_counter_tail;
+
+  modport mon (
+    input enable, receiver_go, receiver_force_go, terminating_pending,
+          crc_err_counter, frame_counter, frame_counter_head, frame_counter_tail,
+          clk, rst
   );
 endinterface

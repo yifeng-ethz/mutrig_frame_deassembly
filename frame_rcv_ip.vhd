@@ -234,6 +234,10 @@ architecture rtl of frame_rcv_ip is
 	-- run control mgmt
 	type run_state_t is (IDLE, RUN_PREPARE, SYNC, RUNNING, TERMINATING, LINK_TEST, SYNC_TEST, RESET, OUT_OF_DAQ, ERROR);
 	signal run_state_cmd				: run_state_t;
+	signal terminating_pending			: std_logic;
+	signal terminating_idle_marker_req	: std_logic;
+	signal terminating_idle_eop_pulse	: std_logic;
+	signal ctrl_ready_comb				: std_logic;
     
     -- //////////////////////////////////////////////////
     -- avmm_slave_csr
@@ -253,6 +257,21 @@ architecture rtl of frame_rcv_ip is
 	signal csr 		: csr_t;
 	 
 begin
+
+	asi_ctrl_ready <= ctrl_ready_comb;
+	ctrl_ready_comb <= '0' when i_rst = '1' else
+	                  '1' when (
+	                      ((run_state_cmd = IDLE) or (run_state_cmd = RUN_PREPARE) or (run_state_cmd = SYNC))
+	                      and p_state = FS_IDLE
+	                      and terminating_pending = '0'
+	                  ) else
+	                  '1' when run_state_cmd = RUNNING else
+	                  '1' when (
+	                      run_state_cmd = TERMINATING
+	                      and p_state = FS_IDLE
+	                      and terminating_pending = '0'
+	                  ) else
+	                  '0';
 
     -- ====================================================================================================
     -- @commentName     Recovery of bad frame for the downstream 
@@ -518,7 +537,9 @@ begin
         --                      fill the bit( 48-27 downto 1) with '0'
         --              bits not carried in record: (note: no longer true)
         --                      T_bad_hit, E_bad_hit, E_fine
-        o_hits.asic     <= asi_rx8b1k_channel;
+        -- Keep the packed hit word's ASIC field at 4 bits while allowing
+        -- narrower or wider CHANNEL_WIDTH generics on the stream interface.
+        o_hits.asic     <= std_logic_vector(resize(unsigned(asi_rx8b1k_channel), o_hits.asic'length));
         o_hits.channel  <= s_o_word(47 downto 43);
         o_hits.T_BadHit <= s_o_word(42);
         o_hits.T_CC     <= s_o_word(41 downto 27);
@@ -565,14 +586,17 @@ begin
                 -- default 
                 aso_hit_type0_startofpacket     <= '0';
                 aso_hit_type0_endofpacket	    <= '0';
-                if (n_new_word = '1') then
-                    if (to_integer(n_word_cnt) = 1) then -- sop
-                        aso_hit_type0_startofpacket <= '1';
-                    end if;
-                    if (to_integer(n_word_cnt) = to_integer(unsigned(n_frame_len))) then -- eop
-                        aso_hit_type0_endofpacket	<= '1';
-                    end if;
-                end if;
+	                if (n_new_word = '1') then
+	                    if (to_integer(n_word_cnt) = 1) then -- sop
+	                        aso_hit_type0_startofpacket <= '1';
+	                    end if;
+	                    if (to_integer(n_word_cnt) = to_integer(unsigned(n_frame_len))) then -- eop
+	                        aso_hit_type0_endofpacket	<= '1';
+	                    end if;
+	                end if;
+	                if (terminating_idle_eop_pulse = '1') then
+	                    aso_hit_type0_endofpacket    <= '1';
+	                end if;
                 -- -----------------------
                 -- derive the hit error
                 -- -----------------------
@@ -923,47 +947,67 @@ begin
     --                  <receiver_force_go/receiver_go> -- control signals to "frame_rcv"
     -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	proc_run_control_mgmt_agent : process (i_clk,i_rst)
+		variable decoded_run_state_v : run_state_t;
 	begin
 		if (i_rst = '1') then 
-			receiver_force_go		<= '0';
-			receiver_go				<= '0';
-			run_state_cmd			<= IDLE; -- after power-on, we can moniter the rate
+			receiver_force_go			<= '0';
+			receiver_go					<= '0';
+			run_state_cmd				<= IDLE;
+			terminating_pending			<= '0';
+			terminating_idle_marker_req	<= '0';
+			terminating_idle_eop_pulse	<= '0';
 		elsif (rising_edge(i_clk)) then 
-			-- valid 
+			decoded_run_state_v := run_state_cmd;
+			terminating_idle_eop_pulse <= '0';
+
 			if (asi_ctrl_valid = '1') then 
-				-- get payload of run control as run command 
 				case asi_ctrl_data is 
 					when "000000001" =>
-						run_state_cmd		<= IDLE;
+						decoded_run_state_v := IDLE;
 					when "000000010" => 
-						run_state_cmd		<= RUN_PREPARE;
+						decoded_run_state_v := RUN_PREPARE;
 					when "000000100" =>
-						run_state_cmd		<= SYNC;
+						decoded_run_state_v := SYNC;
 					when "000001000" =>
-						run_state_cmd		<= RUNNING;
+						decoded_run_state_v := RUNNING;
 					when "000010000" =>
-						run_state_cmd		<= TERMINATING;
+						decoded_run_state_v := TERMINATING;
 					when "000100000" => 
-						run_state_cmd		<= LINK_TEST;
+						decoded_run_state_v := LINK_TEST;
 					when "001000000" =>
-						run_state_cmd		<= SYNC_TEST;
+						decoded_run_state_v := SYNC_TEST;
 					when "010000000" =>
-						run_state_cmd		<= RESET;
+						decoded_run_state_v := RESET;
 					when "100000000" =>
-						run_state_cmd		<= OUT_OF_DAQ;
+						decoded_run_state_v := OUT_OF_DAQ;
 					when others =>
-						run_state_cmd		<= ERROR;
+						decoded_run_state_v := ERROR;
 				end case;
-			else 
-				run_state_cmd		<= run_state_cmd;
 			end if;
-			-- ready
-			asi_ctrl_ready		<= '1';
+
+			run_state_cmd <= decoded_run_state_v;
+
+			if (decoded_run_state_v /= TERMINATING) then
+				terminating_pending <= '0';
+				terminating_idle_marker_req <= '0';
+			elsif (run_state_cmd /= TERMINATING) then
+				terminating_pending <= '1';
+				if (p_state = FS_IDLE) then
+					terminating_idle_marker_req <= '1';
+				else
+					terminating_idle_marker_req <= '0';
+				end if;
+			elsif (terminating_pending = '1' and p_state = FS_IDLE) then
+				terminating_pending <= '0';
+				if (terminating_idle_marker_req = '1') then
+					terminating_idle_eop_pulse <= '1';
+				end if;
+				terminating_idle_marker_req <= '0';
+			end if;
 			
-			-- run control mgmt fsm 
-			case run_state_cmd is 
-				when IDLE => -- must generate frame, ignore mask
-					receiver_force_go		<= '1';
+			case decoded_run_state_v is 
+				when IDLE =>
+					receiver_force_go		<= '0';
 					receiver_go				<= '0';
 				when RUN_PREPARE =>
 					receiver_force_go		<= '0';
@@ -971,23 +1015,17 @@ begin
 				when SYNC => 
 					receiver_force_go		<= '0';
 					receiver_go				<= '0';
-				when RUNNING => -- may generate frame, subject to mask
+				when RUNNING =>
 					receiver_force_go		<= '0';
 					receiver_go				<= '1';
 				when TERMINATING => 
 					receiver_force_go		<= '0';
-					receiver_go				<= '0'; -- stop generation new frame, but finish current frame
+					receiver_go				<= '0';
 				when others =>
 					receiver_force_go		<= '0';
 					receiver_go				<= '0';
 			end case;
-		
-		
-		
 		end if;
-	
-
-	
 	end process;
 	
 	

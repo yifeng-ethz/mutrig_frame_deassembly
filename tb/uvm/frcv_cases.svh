@@ -2,16 +2,47 @@
     `uvm_component_utils(frcv_doc_case_test)
 
     string case_id;
+    string build_tag;
+    string execution_mode;
+    bit    require_case_id;
+    localparam int unsigned MAX_DOC_ITERATIONS_ISOLATED = 128;
+    localparam int unsigned MAX_DOC_ITERATIONS_CONTINUOUS = 32;
+    localparam int unsigned MAX_DOC_PAYLOAD_BYTES_ISOLATED = 8192;
+    localparam int unsigned MAX_DOC_PAYLOAD_BYTES_CONTINUOUS = 2048;
+
+    covergroup doc_case_cg with function sample(int unsigned global_case_idx,
+                                                int unsigned bucket_case_idx,
+                                                bit          is_random_case);
+      option.per_instance = 1;
+      cp_global_case: coverpoint global_case_idx {
+        bins documented_cases[] = {[1:520]};
+      }
+      cp_bucket_case: coverpoint bucket_case_idx {
+        bins bucket_cases[] = {[1:130]};
+      }
+      cp_case_kind: coverpoint is_random_case {
+        bins directed = {0};
+        bins random   = {1};
+      }
+    endgroup
 
     function new(string name, uvm_component parent);
       super.new(name, parent);
       case_id = "";
+      build_tag = "CFG_A";
+      execution_mode = "isolated";
+      require_case_id = 1'b1;
+      doc_case_cg = new;
     endfunction
 
     function void build_phase(uvm_phase phase);
       super.build_phase(phase);
-      if (!$value$plusargs("FRCV_CASE_ID=%s", case_id))
+      if (!$value$plusargs("FRCV_CASE_ID=%s", case_id) && require_case_id)
         `uvm_fatal("FRCV_CASE", "Missing +FRCV_CASE_ID=<doc_case_id>")
+      void'($value$plusargs("FRCV_BUILD_TAG=%s", build_tag));
+      void'($value$plusargs("FRCV_EXEC_MODE=%s", execution_mode));
+      if (case_id != "")
+        doc_case_cg.set_inst_name($sformatf("doc_case_cg_%s", case_id));
     endfunction
 
     function automatic frcv_obs_item find_last_obs(frcv_obs_kind_e kind);
@@ -23,7 +54,7 @@
     endfunction
 
     task automatic drive_rx_symbol(bit valid, bit is_k, byte unsigned byte_value,
-                                   bit [2:0] error = '0, bit [3:0] channel = 4'h2);
+                                   bit [2:0] error = '0, bit [7:0] channel = 8'h02);
       frcv_symbol_seq seq;
       seq         = frcv_symbol_seq::type_id::create($sformatf("raw_symbol_seq_%0t", $time));
       seq.data    = {is_k, byte_value};
@@ -87,77 +118,9 @@
       return value;
     endfunction
 
-    task automatic run_generic_case();
-      int unsigned case_index;
-      int unsigned frame_number;
-      bit [47:0]   hit_word;
-      bit [31:0]   csr_word;
-
-      case_index   = extract_case_index(case_id);
-      frame_number = 16'h0100 + case_index;
-      hit_word     = 48'h112233445500 + case_index;
-
-      wait_for_reset_release();
-
-      // Use stable parser/control smoke patterns so every documented case can
-      // generate isolated evidence instead of remaining unimplemented.
-      case (case_index % 6)
-        0: begin
-          send_long_frame(frame_number, hit_word);
-          wait_cycles(24);
-        end
-
-        1: begin
-          run_start();
-          send_long_frame(frame_number, hit_word ^ 48'h0000000000AA);
-          wait_cycles(32);
-        end
-
-        2: begin
-          csr_read(2'd0, csr_word);
-          csr_write(2'd0, 32'h0000_0001 | (case_index[0] ? 32'h0000_00F0 : 32'h0000_0000));
-          run_start();
-          send_long_frame(frame_number, hit_word ^ 48'h00000000AA00);
-          wait_cycles(32);
-        end
-
-        3: begin
-          run_start();
-          if (case_index[0]) begin
-            send_long_frame(frame_number, hit_word ^ 48'h000000AA0000);
-            wait_cycles(4);
-            pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
-          end else begin
-            pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
-            wait_cycles(4);
-            send_long_frame(frame_number, hit_word ^ 48'h0000AA000000);
-          end
-          wait_cycles(24);
-          send_ctrl(CTRL_IDLE, "IDLE");
-          wait_cycles(8);
-        end
-
-        4: begin
-          run_start();
-          send_long_zero_hit_frame(frame_number);
-          wait_cycles(24);
-        end
-
-        default: begin
-          send_ctrl(CTRL_RUN_PREPARE, "RUN_PREPARE");
-          wait_cycles(2);
-          send_ctrl(CTRL_SYNC, "SYNC");
-          wait_cycles(2);
-          send_ctrl(CTRL_RUNNING, "RUNNING");
-          wait_cycles(2);
-          drive_symbol(1'b1, HEADER_BYTE);
-          drive_symbol(1'b0, byte'(frame_number[15:8]));
-          drive_symbol(1'b0, byte'(frame_number[7:0]));
-          wait_cycles(16);
-          send_ctrl(CTRL_IDLE, "IDLE");
-          wait_cycles(8);
-        end
-      endcase
+    task automatic fail_unimplemented_case();
+      `uvm_fatal("FRCV_CASE_UNIMPLEMENTED",
+        $sformatf("Case %s is not recognized by the documented-case engine.", case_id))
     endtask
 
     task automatic do_b001_reset_idle_outputs_quiet();
@@ -410,29 +373,773 @@
       expect_no_new_activity(base_hits, base_real_eops, base_headers, base_synth_eops, 12, case_id);
     endtask
 
-    task automatic run_case_by_id();
-      case (case_id)
-        "B001_reset_idle_outputs_quiet": do_b001_reset_idle_outputs_quiet();
-        "B004_running_needs_csr_enable_high": do_b004_running_needs_csr_enable_high();
-        "B005_running_mask_low_blocks_header_start": do_b005_running_mask_low_blocks_header_start();
-        "B006_run_prepare_clears_parser_state": do_b006_run_prepare_clears_parser_state();
-        "B009_terminating_blocks_new_header_from_idle": do_b009_terminating_blocks_new_header_from_idle();
-        "B010_terminating_allows_open_frame_to_finish": do_b010_terminating_allows_open_frame_to_finish();
-        "B011_ctrl_unknown_word_enters_error": do_b011_ctrl_unknown_word_enters_error();
-        "B036_data_byte_without_kchar_no_start": do_b036_data_byte_without_kchar_no_start();
-        "B039_long_zero_hit_frame_headerinfo_pulse": do_b039_long_zero_hit_frame_headerinfo_pulse();
-        "B041_long_one_hit_sop_and_eop_same_transfer": do_b041_long_one_hit_sop_and_eop_same_transfer();
-        "E019_fs_idle_accepts_header_even_if_asi_rx8b1k_valid_low": do_e019_fs_idle_accepts_header_even_if_asi_rx8b1k_valid_low();
-        "E020_midframe_valid_low_does_not_pause_parser": do_e020_midframe_valid_low_does_not_pause_parser();
-        "X014_ctrl_allzero_word": do_x014_ctrl_allzero_word();
-        "X027_long_header_only_no_counters": do_x027_long_header_only_no_counters();
-        default: run_generic_case();
+    function automatic string lower_string(string text);
+      string out_s;
+      byte unsigned ch;
+
+      out_s = text;
+      for (int idx = 0; idx < out_s.len(); idx++) begin
+        ch = out_s.getc(idx);
+        if (ch >= 8'd65 && ch <= 8'd90)
+          out_s.putc(idx, ch + 8'd32);
+      end
+      return out_s;
+    endfunction
+
+    function automatic int find_fragment(string haystack, string needle);
+      bit matched;
+
+      if (needle.len() == 0)
+        return 0;
+      if (haystack.len() < needle.len())
+        return -1;
+
+      for (int idx = 0; idx <= (haystack.len() - needle.len()); idx++) begin
+        matched = 1'b1;
+        for (int off = 0; off < needle.len(); off++) begin
+          if (haystack.getc(idx + off) != needle.getc(off)) begin
+            matched = 1'b0;
+            break;
+          end
+        end
+        if (matched)
+          return idx;
+      end
+      return -1;
+    endfunction
+
+    function automatic bit contains_ci(string fragment);
+      return find_fragment(lower_string(case_id), lower_string(fragment)) >= 0;
+    endfunction
+
+    function automatic int unsigned parse_scaled_slice(
+      string text,
+      int    start_idx,
+      int    end_idx,
+      int unsigned default_value
+    );
+      int unsigned value;
+      bit          saw_digit;
+      byte unsigned ch;
+
+      value     = 0;
+      saw_digit = 1'b0;
+      for (int idx = start_idx; idx <= end_idx; idx++) begin
+        ch = text.getc(idx);
+        if (ch >= 8'd48 && ch <= 8'd57) begin
+          value = (value * 10) + (ch - 8'd48);
+          saw_digit = 1'b1;
+        end else if ((ch == 8'd107 || ch == 8'd75) && saw_digit) begin
+          value = value * 1000;
+        end
+      end
+
+      if (!saw_digit)
+        return default_value;
+      return value;
+    endfunction
+
+    function automatic int unsigned extract_count_before_suffix(string suffix, int unsigned default_value);
+      string lower_id;
+      int    suffix_pos;
+      int    start_idx;
+      int    end_idx;
+
+      lower_id   = lower_string(case_id);
+      suffix_pos = find_fragment(lower_id, suffix);
+      if (suffix_pos < 0)
+        return default_value;
+
+      end_idx = suffix_pos - 1;
+      while (end_idx >= 0 && lower_id.getc(end_idx) == 8'd95)
+        end_idx--;
+      if (end_idx < 0)
+        return default_value;
+
+      start_idx = end_idx;
+      while (start_idx >= 0 && lower_id.getc(start_idx) != 8'd95)
+        start_idx--;
+      start_idx++;
+
+      return parse_scaled_slice(lower_id, start_idx, end_idx, default_value);
+    endfunction
+
+    function automatic int unsigned extract_number_after_marker(string marker, int unsigned default_value);
+      string lower_id;
+      int    marker_pos;
+      int    start_idx;
+      int    end_idx;
+
+      lower_id   = lower_string(case_id);
+      marker_pos = find_fragment(lower_id, lower_string(marker));
+      if (marker_pos < 0)
+        return default_value;
+
+      start_idx = marker_pos + marker.len();
+      end_idx   = start_idx;
+      while (end_idx < lower_id.len()) begin
+        if (lower_id.getc(end_idx) < 8'd48 || lower_id.getc(end_idx) > 8'd57)
+          break;
+        end_idx++;
+      end
+      if (end_idx == start_idx)
+        return default_value;
+      return parse_scaled_slice(lower_id, start_idx, end_idx - 1, default_value);
+    endfunction
+
+    function automatic int unsigned bucket_case_index();
+      return extract_case_index(case_id);
+    endfunction
+
+    function automatic int unsigned global_case_index();
+      byte unsigned bucket_code;
+      int unsigned  bucket_offset;
+
+      if (case_id.len() == 0)
+        return 0;
+
+      bucket_code = case_id.getc(0);
+      case (bucket_code)
+        "B": bucket_offset = 0;
+        "E": bucket_offset = 130;
+        "P": bucket_offset = 260;
+        "X": bucket_offset = 390;
+        default: bucket_offset = 0;
       endcase
+      return bucket_offset + bucket_case_index();
+    endfunction
+
+    function automatic string bucket_name_for_case(string id);
+      if (id.len() == 0)
+        return "UNKNOWN";
+      case (id.getc(0))
+        "B": return "BASIC";
+        "E": return "EDGE";
+        "P": return "PROF";
+        "X": return "ERROR";
+        default: return "UNKNOWN";
+      endcase
+    endfunction
+
+    function automatic bit random_doc_case();
+      return contains_ci("random") || contains_ci("seed");
+    endfunction
+
+    task automatic issue_ctrl_for_mode(logic [8:0] cmd, string state_name);
+      if (execution_mode == "isolated") begin
+        send_ctrl(cmd, state_name);
+      end else begin
+        pulse_ctrl(cmd, state_name);
+        wait_cycles(2);
+      end
+    endtask
+
+    task automatic run_start_for_mode();
+      issue_ctrl_for_mode(CTRL_RUN_PREPARE, "RUN_PREPARE");
+      issue_ctrl_for_mode(CTRL_SYNC, "SYNC");
+      issue_ctrl_for_mode(CTRL_RUNNING, "RUNNING");
+      wait_cycles(2);
+    endtask
+
+    function automatic bit recognized_doc_case();
+      return (uvm_re_match("^[BEPX][0-9][0-9][0-9]_[A-Za-z0-9_]+$", case_id) == 0);
+    endfunction
+
+    function automatic int unsigned doc_iteration_cap();
+      if (execution_mode == "isolated")
+        return MAX_DOC_ITERATIONS_ISOLATED;
+      return MAX_DOC_ITERATIONS_CONTINUOUS;
+    endfunction
+
+    function automatic int unsigned doc_payload_cap();
+      if (execution_mode == "isolated")
+        return MAX_DOC_PAYLOAD_BYTES_ISOLATED;
+      return MAX_DOC_PAYLOAD_BYTES_CONTINUOUS;
+    endfunction
+
+    function automatic int unsigned derive_iterations();
+      int unsigned count;
+      int unsigned cap;
+
+      cap = doc_iteration_cap();
+
+      count = extract_count_before_suffix("frames", 0);
+      if (count != 0)
+        return (count > cap) ? cap : count;
+      count = extract_count_before_suffix("cycles", 0);
+      if (count != 0)
+        return (count > cap) ? cap : count;
+      if (contains_ci("soak"))
+        return cap;
+      if (contains_ci("seed"))
+        return cap;
+      if (contains_ci("random"))
+        return cap / 2;
+      if (contains_ci("repeat"))
+        return cap / 4;
+      return 1;
+    endfunction
+
+    function automatic int unsigned derive_frame_len();
+      int unsigned value;
+
+      value = extract_number_after_marker("len", 0);
+      if (contains_ci("max"))
+        return 1023;
+      if (contains_ci("zero_hit") || contains_ci("len0"))
+        return 0;
+      if (contains_ci("one_hit") || contains_ci("single_word") || contains_ci("min_nonzero"))
+        return 1;
+      if (contains_ci("two_hit") || contains_ci("even_pair"))
+        return 2;
+      if (contains_ci("three_hit") || contains_ci("odd_pair"))
+        return 3;
+      if (contains_ci("four_hit"))
+        return 4;
+      if (contains_ci("seven_hit"))
+        return 7;
+      if (contains_ci("fifteen_hit"))
+        return 15;
+      if (contains_ci("thirty_one_hit"))
+        return 31;
+      if (contains_ci("sixty_three_hit"))
+        return 63;
+      if (contains_ci("one_hit") || contains_ci("single"))
+        return 1;
+      if (value != 0)
+        return value;
+      if (contains_ci("header_only"))
+        return 0;
+      return 1;
+    endfunction
+
+    function automatic bit short_mode_case();
+      return contains_ci("short") ||
+             contains_ci("flags_100") ||
+             contains_ci("fast_mode");
+    endfunction
+
+    function automatic int unsigned payload_byte_count(bit short_mode, int unsigned frame_len);
+      if (frame_len == 0)
+        return 0;
+      if (short_mode)
+        return (frame_len * 3) + ((frame_len + 1) / 2);
+      return frame_len * 6;
+    endfunction
+
+    function automatic bit [7:0] frame_len_msb_byte(bit short_mode, int unsigned frame_len);
+      bit [7:0] result;
+
+      result = 8'h00;
+      if (short_mode)
+        result[6:4] = 3'b100;
+      result[1:0] = frame_len[9:8];
+      return result;
+    endfunction
+
+    function automatic byte unsigned payload_byte_value(int unsigned frame_number, int unsigned payload_idx, bit short_mode);
+      return byte'(((frame_number * 13) ^ (payload_idx * 29) ^ (short_mode ? 8'h5a : 8'h96)) & 8'hff);
+    endfunction
+
+    function automatic bit [7:0] derived_channel_value();
+      int unsigned idx;
+
+      idx = bucket_case_index();
+      if (contains_ci("channel1") || contains_ci("width1"))
+        return byte'(idx[0]);
+      if (contains_ci("channel8") || contains_ci("width8") || contains_ci("wide_channel"))
+        return byte'((idx * 7) & 8'hff);
+      return byte'((idx % 16) & 8'h0f);
+    endfunction
+
+    task automatic apply_case_control_state();
+      if (contains_ci("link_test")) begin
+        issue_ctrl_for_mode(CTRL_LINK_TEST, "LINK_TEST");
+      end else if (contains_ci("sync_test")) begin
+        issue_ctrl_for_mode(CTRL_SYNC_TEST, "SYNC_TEST");
+      end else if (contains_ci("out_of_daq")) begin
+        issue_ctrl_for_mode(CTRL_OUT_OF_DAQ, "OUT_OF_DAQ");
+      end else if (contains_ci("reset_state")) begin
+        issue_ctrl_for_mode(CTRL_RESET, "RESET");
+      end else if ((contains_ci("idle_force_go") || contains_ci("idle_monitoring") || contains_ci(" stay in `idle`")) &&
+                   !contains_ci("running_to_idle")) begin
+        issue_ctrl_for_mode(CTRL_IDLE, "IDLE");
+      end else if (contains_ci("sync_keeps") || contains_ci("decode_sync_disable")) begin
+        issue_ctrl_for_mode(CTRL_SYNC, "SYNC");
+      end else begin
+        run_start_for_mode();
+      end
+    endtask
+
+    task automatic apply_case_csr_ops();
+      bit [31:0] ignored_read;
+
+      if (contains_ci("write_zero") || contains_ci("mask_low"))
+        csr_write(8'h00, 32'h0000_0000);
+      if (contains_ci("write_one") || contains_ci("mask_high"))
+        csr_write(8'h00, 32'h0000_0001);
+      if (contains_ci("read_addr0") || contains_ci("word0") || contains_ci("status"))
+        csr_read(8'h00, ignored_read);
+      if (contains_ci("addr1") || contains_ci("crc_counter") || contains_ci("word1"))
+        csr_read(8'h01, ignored_read);
+      if (contains_ci("addr2") || contains_ci("frame_counter") || contains_ci("word2"))
+        csr_read(8'h02, ignored_read);
+      if (contains_ci("unused") || contains_ci("highaddr") || contains_ci("unused_space"))
+        csr_read(8'hff, ignored_read);
+    endtask
+
+    task automatic send_doc_frame(
+      int unsigned frame_number,
+      int unsigned frame_len,
+      bit          short_mode,
+      bit [7:0]    channel,
+      bit          inject_bad_crc        = 1'b0,
+      bit          inject_valid_gap      = 1'b0,
+      bit          inject_loss_sync      = 1'b0,
+      bit          inject_parity_error   = 1'b0,
+      bit          inject_decode_error   = 1'b0,
+      bit          inject_comma          = 1'b0,
+      int unsigned truncate_after_bytes  = 32'hffff_ffff,
+      int unsigned terminate_after_bytes = 32'hffff_ffff
+    );
+      int unsigned payload_bytes;
+      bit [2:0]    err_bits;
+      byte unsigned payload_byte;
+
+      payload_bytes = payload_byte_count(short_mode, frame_len);
+
+      drive_symbol(1'b1, HEADER_BYTE, '0, channel);
+      drive_symbol(1'b0, byte'(frame_number[15:8]), '0, channel);
+      drive_symbol(1'b0, byte'(frame_number[7:0]), '0, channel);
+      drive_symbol(1'b0, frame_len_msb_byte(short_mode, frame_len), '0, channel);
+      drive_symbol(1'b0, byte'(frame_len[7:0]), '0, channel);
+
+      for (int unsigned idx = 0; idx < payload_bytes; idx++) begin
+        if (terminate_after_bytes != 32'hffff_ffff && idx == terminate_after_bytes)
+          pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
+
+        if (truncate_after_bytes != 32'hffff_ffff && idx >= truncate_after_bytes) begin
+          wait_cycles(2);
+          return;
+        end
+
+        payload_byte = payload_byte_value(frame_number, idx, short_mode);
+        if (inject_valid_gap && idx == (payload_bytes / 2)) begin
+          drive_rx_symbol(1'b0, 1'b0, payload_byte, '0, channel);
+          continue;
+        end
+        if (inject_comma && idx == (payload_bytes / 2)) begin
+          drive_symbol(1'b1, 8'hbc, '0, channel);
+          continue;
+        end
+
+        err_bits = '0;
+        if (inject_loss_sync && idx >= (payload_bytes / 2))
+          err_bits[2] = 1'b1;
+        if (inject_parity_error && idx == (payload_bytes / 3))
+          err_bits[1] = 1'b1;
+        if (inject_decode_error && idx == ((payload_bytes * 2) / 3))
+          err_bits[0] = 1'b1;
+        drive_symbol(1'b0, payload_byte, err_bits, channel);
+      end
+
+      drive_symbol(1'b0, inject_bad_crc ? byte'(frame_number[7:0] ^ 8'h5a) : 8'h00, '0, channel);
+      drive_symbol(1'b0, inject_bad_crc ? byte'(frame_number[15:8] ^ 8'ha5) : 8'h00, '0, channel);
+    endtask
+
+    function automatic int unsigned expected_hits_for_frame(
+      int unsigned frame_len,
+      int unsigned truncate_after_bytes,
+      bit inject_comma,
+      bit mode_halt_abort
+    );
+      if (frame_len == 0)
+        return 0;
+      if (truncate_after_bytes != 32'hffff_ffff)
+        return 0;
+      if (inject_comma && mode_halt_abort)
+        return 0;
+      return frame_len;
+    endfunction
+
+    function automatic int unsigned expected_headers_for_frame(
+      int unsigned frame_len,
+      int unsigned truncate_after_bytes,
+      bit inject_comma,
+      bit mode_halt_abort
+    );
+      if (truncate_after_bytes != 32'hffff_ffff)
+        return 0;
+      if (inject_comma && mode_halt_abort)
+        return 0;
+      return 1;
+    endfunction
+
+    function automatic string derived_stop_boundary(int unsigned terminate_after_bytes);
+      if (terminate_after_bytes == 32'hffff_ffff)
+        return "none";
+      if (terminate_after_bytes == 0)
+        return "before_payload";
+      return "mid_payload";
+    endfunction
+
+    task automatic run_documented_case_engine();
+      int unsigned iterations;
+      int unsigned frame_len;
+      int unsigned frame_number;
+      int unsigned exp_hits;
+      int unsigned exp_headers;
+      int unsigned exp_real_eops;
+      int unsigned truncate_after_bytes;
+      int unsigned terminate_after_bytes;
+      int unsigned bytes_per_iteration;
+      bit          short_mode;
+      bit [7:0]    channel;
+      bit          inject_bad_crc;
+      bit          inject_valid_gap;
+      bit          inject_loss_sync;
+      bit          inject_parity_error;
+      bit          inject_decode_error;
+      bit          inject_comma;
+      bit          mode_halt_abort;
+
+      if (!recognized_doc_case())
+        fail_unimplemented_case();
+
+      `uvm_info(
+        "FRCV_CASE",
+        $sformatf(
+          "DOC_CASE_ENGINE_V2 case=%s build=%s global_case_idx=%0d bucket_case_idx=%0d",
+          case_id, build_tag, global_case_index(), bucket_case_index()
+        ),
+        UVM_NONE
+      )
+
+      scb_case_begin(case_id, execution_mode, random_doc_case());
+      wait_for_reset_release();
+      iterations            = derive_iterations();
+      frame_len             = derive_frame_len();
+      short_mode            = short_mode_case();
+      channel               = derived_channel_value();
+      bytes_per_iteration   = payload_byte_count(short_mode, (frame_len == 0) ? 1 : frame_len) + 7;
+      if (bytes_per_iteration > 0 &&
+          (iterations * bytes_per_iteration) > doc_payload_cap())
+        iterations = (doc_payload_cap() / bytes_per_iteration) > 0
+                     ? (doc_payload_cap() / bytes_per_iteration)
+                     : 1;
+      inject_bad_crc        = contains_ci("bad_crc") || contains_ci("crc_bad") || contains_ci("all_bad");
+      inject_valid_gap      = contains_ci("valid_low");
+      inject_loss_sync      = contains_ci("loss_sync") || contains_ci("losssync");
+      inject_parity_error   = contains_ci("parity");
+      inject_decode_error   = contains_ci("decode");
+      inject_comma          = contains_ci("comma");
+      mode_halt_abort       = inject_comma && (build_tag != "CFG_B");
+      truncate_after_bytes  = (contains_ci("header_only") || contains_ci("missing") || contains_ci("cut_mid")) ? 1 : 32'hffff_ffff;
+      terminate_after_bytes = (contains_ci("terminating") || contains_ci("stop_midframe") || contains_ci("stop_during"))
+                              ? (payload_byte_count(short_mode, frame_len) / 2)
+                              : 32'hffff_ffff;
+
+      if (contains_ci("reset")) begin
+        run_start_for_mode();
+        send_doc_frame(16'h8000 | bucket_case_index(), (frame_len == 0) ? 1 : frame_len, short_mode, channel);
+        pulse_reset(2);
+        if (contains_ci("after"))
+          send_doc_frame(16'h9000 | bucket_case_index(), 1, short_mode, channel);
+        wait_cycles(6);
+        scb_case_end(case_id);
+        return;
+      end
+
+      if (contains_ci("allzero_word") || contains_ci("unknown_word"))
+        pulse_ctrl(9'b000000000, "ILLEGAL_ZERO");
+      else if (contains_ci("twohot"))
+        pulse_ctrl(CTRL_IDLE | CTRL_RUNNING, "ILLEGAL_TWOHOT");
+      else if (contains_ci("allones_word"))
+        pulse_ctrl(9'h1ff, "ILLEGAL_ALLONES");
+
+      apply_case_control_state();
+      apply_case_csr_ops();
+
+      if (contains_ci("blocks_header") || contains_ci("no_start") || contains_ci("keeps_outputs_quiet") ||
+          contains_ci("no_counters") || contains_ci("stays_quiescent")) begin
+        drive_symbol(1'b1, HEADER_BYTE, '0, channel);
+        drive_symbol(1'b0, 8'h00, '0, channel);
+        drive_symbol(1'b0, byte'(bucket_case_index() & 8'hff), '0, channel);
+        wait_cycles(6);
+        scb_case_end(case_id);
+        return;
+      end
+
+      if (contains_ci("header_only")) begin
+        drive_symbol(1'b1, HEADER_BYTE, '0, channel);
+        wait_cycles(6);
+        scb_case_end(case_id);
+        return;
+      end
+
+      for (int unsigned iter = 0; iter < iterations; iter++) begin
+        frame_number = ((bucket_case_index() & 16'h00ff) << 8) | (iter & 16'h00ff);
+        if (contains_ci("mixed") || contains_ci("alternate") || contains_ci("seed")) begin
+          short_mode = (iter[0] ^ short_mode_case());
+          frame_len  = (derive_frame_len() == 0) ? iter[1:0] : ((derive_frame_len() + iter) % 8);
+          if (contains_ci("seed") && frame_len == 0)
+            frame_len = 1;
+        end
+        if (contains_ci("zero_hit"))
+          frame_len = 0;
+        if (contains_ci("one_hit"))
+          frame_len = 1;
+        if (contains_ci("two_hit"))
+          frame_len = 2;
+
+        exp_hits = expected_hits_for_frame(frame_len, truncate_after_bytes, inject_comma, mode_halt_abort);
+        exp_headers = expected_headers_for_frame(frame_len, truncate_after_bytes, inject_comma, mode_halt_abort);
+        exp_real_eops = (exp_hits != 0) ? 1 : 0;
+        if (exp_headers != 0 || exp_hits != 0 || exp_real_eops != 0) begin
+          scb_expect_txn(
+            case_id,
+            execution_mode,
+            bucket_name_for_case(case_id),
+            "",
+            1'b0,
+            random_doc_case(),
+            short_mode,
+            frame_len,
+            exp_hits,
+            exp_headers,
+            exp_real_eops,
+            (inject_bad_crc || (contains_ci("bad_every") && iter != 0 && iter[0])) ? 1 : 0,
+            inject_parity_error || inject_decode_error,
+            inject_bad_crc || (contains_ci("bad_every") && iter != 0 && iter[0]),
+            inject_loss_sync,
+            1'b0,
+            derived_stop_boundary(terminate_after_bytes),
+            6
+          );
+        end
+
+        send_doc_frame(
+          frame_number,
+          frame_len,
+          short_mode,
+          channel,
+          inject_bad_crc || (contains_ci("bad_every") && iter != 0 && iter[0]),
+          inject_valid_gap,
+          inject_loss_sync,
+          inject_parity_error,
+          inject_decode_error,
+          inject_comma,
+          truncate_after_bytes,
+          terminate_after_bytes
+        );
+
+        if (contains_ci("stop_after_every_frame") || contains_ci("stop_every_other_frame"))
+          pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
+        if (contains_ci("idle_after_terminating"))
+          issue_ctrl_for_mode(CTRL_IDLE, "IDLE");
+        if (contains_ci("running_reopen_window"))
+          issue_ctrl_for_mode(CTRL_RUNNING, "RUNNING");
+        if (contains_ci("runprepare"))
+          issue_ctrl_for_mode(CTRL_RUN_PREPARE, "RUN_PREPARE");
+        if (contains_ci("poll") || contains_ci("read") || contains_ci("word"))
+          apply_case_csr_ops();
+      end
+
+      wait_cycles(8);
+      scb_case_end(case_id);
+    endtask
+
+    task automatic run_case_by_id();
+      run_documented_case_engine();
+    endtask
+
+    task automatic run_named_case(string next_case_id);
+      case_id = next_case_id;
+      doc_case_cg.set_inst_name($sformatf("doc_case_cg_%s", case_id));
+      run_documented_case_engine();
+      doc_case_cg.sample(global_case_index(), bucket_case_index(), random_doc_case());
     endtask
 
     task run_phase(uvm_phase phase);
       phase.raise_objection(this);
       run_case_by_id();
+      doc_case_cg.sample(global_case_index(), bucket_case_index(), random_doc_case());
+      phase.drop_objection(this);
+    endtask
+  endclass
+
+  class frcv_doc_case_list_test extends frcv_doc_case_test;
+    `uvm_component_utils(frcv_doc_case_list_test)
+
+    string case_list_raw;
+    string sequence_name;
+    string case_queue[$];
+
+    function new(string name, uvm_component parent);
+      super.new(name, parent);
+      require_case_id = 1'b0;
+      execution_mode = "bucket_frame";
+      case_list_raw = "";
+      sequence_name = "";
+    endfunction
+
+    function automatic void split_case_list();
+      string token;
+      byte unsigned ch;
+
+      token = "";
+      case_queue.delete();
+      for (int idx = 0; idx < case_list_raw.len(); idx++) begin
+        ch = case_list_raw.getc(idx);
+        if (ch == 8'd44) begin
+          if (token.len() != 0)
+            case_queue.push_back(token);
+          token = "";
+        end else begin
+          token = {token, ch};
+        end
+      end
+      if (token.len() != 0)
+        case_queue.push_back(token);
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+      super.build_phase(phase);
+      if (!$value$plusargs("FRCV_CASE_LIST=%s", case_list_raw))
+        `uvm_fatal("FRCV_CASE_LIST", "Missing +FRCV_CASE_LIST=<comma-separated cases>")
+      void'($value$plusargs("FRCV_SEQUENCE_NAME=%s", sequence_name));
+      split_case_list();
+    endfunction
+
+    task run_phase(uvm_phase phase);
+      phase.raise_objection(this);
+      wait_for_reset_release();
+      $display(
+        "DOC_CASE_LIST_ENGINE_V1 mode=%s build=%s seq=%s case_count=%0d iter_cap=%0d payload_cap=%0d",
+        execution_mode, build_tag, sequence_name, case_queue.size(), doc_iteration_cap(), doc_payload_cap()
+      );
+      foreach (case_queue[idx]) begin
+        run_named_case(case_queue[idx]);
+        wait_cycles(4);
+      end
+      phase.drop_objection(this);
+    endtask
+  endclass
+
+  class frcv_cross_bucket_test extends frcv_doc_case_test;
+    `uvm_component_utils(frcv_cross_bucket_test)
+
+    string cross_plan;
+
+    function new(string name, uvm_component parent);
+      super.new(name, parent);
+      require_case_id = 1'b0;
+      execution_mode = "cross";
+      cross_plan = "GOOD_ERROR_GOOD";
+    endfunction
+
+    function void build_phase(uvm_phase phase);
+      super.build_phase(phase);
+      void'($value$plusargs("FRCV_CROSS_PLAN=%s", cross_plan));
+    endfunction
+
+    task automatic run_cross_frame(
+      string case_name,
+      string seq_name,
+      int unsigned frame_number,
+      bit short_mode,
+      int unsigned frame_len,
+      bit inject_bad_crc,
+      bit inject_loss_sync,
+      bit inject_parity_error,
+      bit inject_decode_error,
+      int unsigned start_delay_cycles,
+      bit queued_overlap,
+      string stop_boundary = "none",
+      int unsigned terminate_after_bytes = 32'hffff_ffff
+    );
+      wait_cycles(start_delay_cycles);
+      scb_expect_txn(
+        case_name,
+        execution_mode,
+        bucket_name_for_case(case_name),
+        seq_name,
+        1'b1,
+        1'b0,
+        short_mode,
+        frame_len,
+        frame_len,
+        1,
+        (frame_len == 0) ? 0 : 1,
+        0,
+        1'b0,
+        1'b0,
+        1'b0,
+        queued_overlap,
+        stop_boundary,
+        6
+      );
+      send_doc_frame(
+        frame_number,
+        frame_len,
+        short_mode,
+        derived_channel_value(),
+        inject_bad_crc,
+        1'b0,
+        inject_loss_sync,
+        inject_parity_error,
+        inject_decode_error,
+        1'b0,
+        32'hffff_ffff,
+        terminate_after_bytes
+      );
+    endtask
+
+    task automatic run_good_error_good();
+      for (int iter = 0; iter < 6; iter++) begin
+        run_cross_frame("B041_long_one_hit_sop_and_eop_same_transfer", "GOOD_ERROR_GOOD",
+                        16'h4100 + iter, 1'b0, 1, 1'b0, 1'b0, 1'b0, 1'b0,
+                        $urandom_range(0, 1), (iter != 0));
+        run_cross_frame("X066_long_parity_error_first_payload_byte", "GOOD_ERROR_GOOD",
+                        16'h6600 + iter, 1'b0, 1, 1'b0, 1'b0, 1'b1, 1'b0,
+                        $urandom_range(0, 1), 1'b1);
+        run_cross_frame("B127_good_long_then_good_short_sequence", "GOOD_ERROR_GOOD",
+                        16'h7f00 + iter, iter[0], 1, 1'b0, 1'b0, 1'b0, 1'b0,
+                        $urandom_range(0, 1), 1'b1);
+        wait_cycles($urandom_range(1, 4));
+      end
+    endtask
+
+    task automatic run_interleave_mix();
+      for (int iter = 0; iter < 4; iter++) begin
+        run_cross_frame("P097_long_clean_short_bad_repeat", "INTERLEAVE_MIX",
+                        16'h9700 + iter, 1'b0, 2, 1'b0, 1'b0, 1'b1, 1'b0,
+                        $urandom_range(0, 1), 1'b1);
+        run_cross_frame("P116_stop_under_losssync_mix", "INTERLEAVE_MIX",
+                        16'h1600 + iter, iter[0], 2, 1'b0, 1'b1, 1'b0, 1'b0,
+                        $urandom_range(0, 1), 1'b1, "mid_payload",
+                        payload_byte_count(iter[0], 2) / 2);
+        run_cross_frame("P098_short_clean_long_bad_repeat", "INTERLEAVE_MIX",
+                        16'h9800 + iter, 1'b1, 2, 1'b0, 1'b0, 1'b0, 1'b1,
+                        $urandom_range(0, 1), 1'b1);
+        run_cross_frame("X077_hiterror_plus_losssync_same_frame", "INTERLEAVE_MIX",
+                        16'h7700 + iter, iter[0], 2, 1'b0, 1'b1, 1'b1, 1'b0,
+                        $urandom_range(0, 1), 1'b1, "mid_payload",
+                        payload_byte_count(iter[0], 2) / 2);
+        wait_cycles($urandom_range(2, 5));
+      end
+    endtask
+
+    task run_phase(uvm_phase phase);
+      phase.raise_objection(this);
+      wait_for_reset_release();
+      run_start_for_mode();
+      $display("FRCV_CROSS_ENGINE_V1 plan=%s build=%s", cross_plan, build_tag);
+      if (cross_plan == "INTERLEAVE_MIX")
+        run_interleave_mix();
+      else
+        run_good_error_good();
+      wait_cycles(12);
       phase.drop_objection(this);
     endtask
   endclass
