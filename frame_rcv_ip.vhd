@@ -291,10 +291,10 @@ begin
         -- -----------------------------------------------
         -- connect the 8b data to frame_rcv entry point
         -- -----------------------------------------------
-		if (asi_rx8b1k_error(2) = '0') then
+		if (asi_rx8b1k_error(2) = '0' and asi_rx8b1k_valid = '1') then
 			i_data				<= asi_rx8b1k_data(7 downto 0);
 			i_byteisk			<= asi_rx8b1k_data(8);
-		else -- mask if "loss_sync_pattern" error is present
+		else -- halt on invalid input or mask if "loss_sync_pattern" error is present
 			i_data				<= x"BC";
 			i_byteisk			<= '1';
 		end if;
