@@ -24,10 +24,12 @@
 -- Revision 1.30 - YW: Fixed E-Flag field as the name suggests. The field was E-BadHit. Move T/E-BadHit to aso_error(0).
 -- Revision 1.31 - YW: Correct long-hit compaction to drop only E_BadHit and E_fine.
 -- Revision 1.33 - YW: Keep header detection alive during TERMINATING so delayed final drain frames are parsed.
--- Version : 26.0.2
+-- Revision 1.34 - YW: Replace synthetic idle EOP with a dedicated end-of-run pulse after the final drain frame.
+-- Revision 1.35 - YW: Guard TERMINATING idle-close until the upstream byte lane stays quiet long enough for a delayed final frame.
+-- Version : 26.0.4
 -- Date    : 20260416
--- Change  : Allow terminating drain frames on the physical 8b/10b input to enter the parser without reopening
---           non-terminating run states.
+-- Change  : Delay the dedicated hit_type0_endofrun pulse until TERMINATING sees a sustained quiet window,
+--           so a late final MuTRiG frame cannot arrive after downstream already closed the run.
 
 -- Additional Comments:
 --      IP wrapper layer: 
@@ -83,6 +85,7 @@ port(
 	aso_hit_type0_channel			: out std_logic_vector(CHANNEL_WIDTH-1 downto 0); -- for asic 0-15
 	aso_hit_type0_startofpacket		: out std_logic;
 	aso_hit_type0_endofpacket		: out std_logic;
+	aso_hit_type0_endofrun			: out std_logic;
 	aso_hit_type0_error				: out std_logic_vector(2 downto 0); 
     -- =============================================================
     -- <errorDescriptor>
@@ -126,7 +129,8 @@ port(
 end entity frame_rcv_ip;
 
 architecture rtl of frame_rcv_ip is
-    
+
+	constant TERMINATING_IDLE_GUARD_CONST : natural := 2048;
 
 	-- Hit type (long) before sorter, before TCC division
 	-- ==================================================================
@@ -235,8 +239,8 @@ architecture rtl of frame_rcv_ip is
 	type run_state_t is (IDLE, RUN_PREPARE, SYNC, RUNNING, TERMINATING, LINK_TEST, SYNC_TEST, RESET, OUT_OF_DAQ, ERROR);
 	signal run_state_cmd				: run_state_t;
 	signal terminating_pending			: std_logic;
-	signal terminating_idle_marker_req	: std_logic;
-	signal terminating_idle_eop_pulse	: std_logic;
+	signal terminating_endofrun_pulse	: std_logic;
+	signal terminating_idle_guard_cnt	: natural range 0 to TERMINATING_IDLE_GUARD_CONST;
 	signal ctrl_ready_comb				: std_logic;
     
     -- //////////////////////////////////////////////////
@@ -258,6 +262,7 @@ architecture rtl of frame_rcv_ip is
 	 
 begin
 
+	aso_hit_type0_endofrun <= terminating_endofrun_pulse;
 	asi_ctrl_ready <= ctrl_ready_comb;
 	ctrl_ready_comb <= '0' when i_rst = '1' else
 	                  '1' when (
@@ -491,22 +496,16 @@ begin
     --                                     if the user do not wish to parse this lane/mutrig. 
     -- @output          <enable> - control bit of "frame_rcv" to pick up new frame by detecting header
     -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-	proc_enable_ctrl : process (i_clk,i_rst)
+	proc_enable_ctrl : process (all)
 	begin
-		if (i_rst = '1' ) then 
-			enable			<= '0'; -- default is disable
-		elsif rising_edge(i_clk) then
-			if (receiver_force_go = '1') then
-				enable 			<= '1';
-			elsif (receiver_go = '1' or run_state_cmd = TERMINATING) then -- allow the terminating drain frame to start.
-				if (csr.control(0) = '1') then   -- not masked
-					enable			<= '1';
-				else
-					enable			<= '0';
-				end if;
-			else 
-				enable			<= '0';
-			end if;
+		enable <= '0';
+		if (receiver_force_go = '1') then
+			enable <= '1';
+		elsif ((receiver_go = '1' or run_state_cmd = TERMINATING) and csr.control(0) = '1') then
+			-- Drop frame-start permission immediately after a non-running
+			-- control word is accepted while still allowing the terminating
+			-- tail frame to start.
+			enable <= '1';
 		end if;
 	end process proc_enable_ctrl;
 	
@@ -593,9 +592,6 @@ begin
 	                    if (to_integer(n_word_cnt) = to_integer(unsigned(n_frame_len))) then -- eop
 	                        aso_hit_type0_endofpacket	<= '1';
 	                    end if;
-	                end if;
-	                if (terminating_idle_eop_pulse = '1') then
-	                    aso_hit_type0_endofpacket    <= '1';
 	                end if;
                 -- -----------------------
                 -- derive the hit error
@@ -954,11 +950,11 @@ begin
 			receiver_go					<= '0';
 			run_state_cmd				<= IDLE;
 			terminating_pending			<= '0';
-			terminating_idle_marker_req	<= '0';
-			terminating_idle_eop_pulse	<= '0';
+			terminating_endofrun_pulse	<= '0';
+			terminating_idle_guard_cnt	<= 0;
 		elsif (rising_edge(i_clk)) then 
 			decoded_run_state_v := run_state_cmd;
-			terminating_idle_eop_pulse <= '0';
+			terminating_endofrun_pulse <= '0';
 
 			if (asi_ctrl_valid = '1') then 
 				case asi_ctrl_data is 
@@ -989,20 +985,22 @@ begin
 
 			if (decoded_run_state_v /= TERMINATING) then
 				terminating_pending <= '0';
-				terminating_idle_marker_req <= '0';
+				terminating_idle_guard_cnt <= 0;
 			elsif (run_state_cmd /= TERMINATING) then
 				terminating_pending <= '1';
-				if (p_state = FS_IDLE) then
-					terminating_idle_marker_req <= '1';
+				terminating_idle_guard_cnt <= 0;
+			elsif (terminating_pending = '1') then
+				if (p_state /= FS_IDLE or asi_rx8b1k_valid = '1') then
+					terminating_idle_guard_cnt <= 0;
+				elsif (terminating_idle_guard_cnt >= TERMINATING_IDLE_GUARD_CONST - 1) then
+					terminating_pending <= '0';
+					terminating_idle_guard_cnt <= TERMINATING_IDLE_GUARD_CONST;
+					terminating_endofrun_pulse <= '1';
 				else
-					terminating_idle_marker_req <= '0';
+					terminating_idle_guard_cnt <= terminating_idle_guard_cnt + 1;
 				end if;
-			elsif (terminating_pending = '1' and p_state = FS_IDLE) then
-				terminating_pending <= '0';
-				if (terminating_idle_marker_req = '1') then
-					terminating_idle_eop_pulse <= '1';
-				end if;
-				terminating_idle_marker_req <= '0';
+			else
+				terminating_idle_guard_cnt <= 0;
 			end if;
 			
 			case decoded_run_state_v is 

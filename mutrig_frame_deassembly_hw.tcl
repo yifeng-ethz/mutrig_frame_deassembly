@@ -17,9 +17,9 @@ set DEFAULT_CSR_ADDR_WIDTH_CONST   2
 set IP_UID_DEFAULT_CONST           1179804502 ;# ASCII "FRCV" = 0x46524356
 set VERSION_MAJOR_DEFAULT_CONST    26
 set VERSION_MINOR_DEFAULT_CONST    0
-set VERSION_PATCH_DEFAULT_CONST    1
-set BUILD_DEFAULT_CONST            415
-set VERSION_DATE_DEFAULT_CONST     20260415
+set VERSION_PATCH_DEFAULT_CONST    4
+set BUILD_DEFAULT_CONST            416
+set VERSION_DATE_DEFAULT_CONST     20260416
 set VERSION_GIT_DEFAULT_CONST      0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -89,8 +89,8 @@ frame metadata for downstream timestamp processing.<br/><br/>\
 <b>RUNNING</b> opens new header detection, subject to <b>csr.control[0]</b>.<br/>\
 <b>TERMINATING</b> blocks fresh header pickup, keeps the active parser state draining, and\
 only acknowledges after the parser is idle. If terminate arrives while already idle, the IP\
-emits one synthetic <b>hit_type0_endofpacket</b> pulse with <b>valid=0</b> so downstream drain\
-logic still sees a terminal packet boundary.<br/>\
+emits one dedicated <b>hit_type0_endofrun</b> pulse after local drain completion so downstream\
+logic still sees a terminal run boundary without fabricating a payload beat.<br/>\
 <b>IDLE</b> is quiescent in this packaged revision; the legacy \"monitor while idle\" behavior is\
 not part of the delivered contract.<br/><br/>\
 <b>Parameterized widths</b><br/>\
@@ -117,7 +117,7 @@ Packaged as <b>%s</b>.<br/><br/>\
 <b>Delivered behavior</b><br/>\
 This image hardens the run-sequence boundary: <b>asi_ctrl_ready</b> is stateful, <b>IDLE</b> is\
 quiescent, and <b>TERMINATING</b> closes only after the local parser has finished or emitted the\
-idle-close terminal marker.<br/><br/>\
+dedicated idle-close <b>endofrun</b> pulse.<br/><br/>\
 <b>Packaging provenance</b><br/>\
 Default git stamp <b>%s</b> (%s). Git describe: <b>%s</b>.</html>} \
             $version_string \
@@ -150,7 +150,7 @@ the lane-corrupt error bit; <b>asi_rx8b1k_valid</b> is present on the interface 
 <b>Egress stream: hit_type0</b><br/>\
 45-bit payload = ASIC[44:41], channel[40:36], TCC[35:21], TFine[20:16], ECC[15:1], EFlag[0].\
 Sideband error = <b>{frame_corrupt, crc_error, hit_error}</b>. <b>startofpacket</b> and <b>endofpacket</b> are aligned to parsed hit beats;\
-the idle-close terminate marker is a synthetic <b>endofpacket</b> pulse with <b>valid=0</b>.<br/><br/>\
+a dedicated <b>endofrun</b> pulse is emitted once per run after the final local drain, including the idle-terminate case.<br/><br/>\
 <b>Egress stream: headerinfo</b><br/>\
 42-bit payload = frame_flags[5:0], frame_len[15:6], word_count[25:16], frame_number[41:26]. Channel mirrors the ingress lane selector.<br/><br/>\
 <b>Control stream: ctrl</b><br/>\
@@ -383,6 +383,7 @@ set_interface_property hit_type0 readyLatency 0
 set_interface_property hit_type0 ENABLED true
 add_interface_port hit_type0 aso_hit_type0_startofpacket startofpacket Output 1
 add_interface_port hit_type0 aso_hit_type0_endofpacket   endofpacket   Output 1
+add_interface_port hit_type0 aso_hit_type0_endofrun      endofrun      Output 1
 add_interface_port hit_type0 aso_hit_type0_error         error         Output 3
 add_interface_port hit_type0 aso_hit_type0_data          data          Output 45
 add_interface_port hit_type0 aso_hit_type0_valid         valid         Output 1

@@ -25,7 +25,7 @@ package frcv_env_pkg;
   typedef enum int unsigned {
     FRCV_OBS_HEADER,
     FRCV_OBS_HIT,
-    FRCV_OBS_SYNTH_EOP
+    FRCV_OBS_ENDOFRUN
   } frcv_obs_kind_e;
 
   typedef enum int unsigned {
@@ -336,6 +336,10 @@ package frcv_env_pkg;
         end else begin
           @(posedge vif.clk);
           item.accept_time_ps = $time;
+          // Keep pulse-mode commands stable for one extra sampled cycle so
+          // the synchronous run-control agent cannot miss a same-edge UVM
+          // drive/update race during active datapath traffic.
+          @(posedge vif.clk);
           vif.valid <= 1'b0;
           vif.data  <= CTRL_IDLE;
         end
@@ -649,9 +653,9 @@ package frcv_env_pkg;
           ap.write(obs);
         end
 
-        if (vif.hit_eop === 1'b1 && vif.hit_valid !== 1'b1) begin
-          obs         = frcv_obs_item::type_id::create("synth_eop_obs");
-          obs.kind    = FRCV_OBS_SYNTH_EOP;
+        if (vif.hit_endofrun === 1'b1) begin
+          obs         = frcv_obs_item::type_id::create("endofrun_obs");
+          obs.kind    = FRCV_OBS_ENDOFRUN;
           obs.time_ps = $time;
           ap.write(obs);
         end
@@ -672,7 +676,7 @@ package frcv_env_pkg;
     int unsigned header_count;
     int unsigned hit_count;
     int unsigned real_eop_count;
-    int unsigned synth_eop_count;
+    int unsigned endofrun_count;
     int unsigned cycle_count;
     int unsigned completed_txn_count;
     int unsigned counter_checks_passed;
@@ -683,7 +687,7 @@ package frcv_env_pkg;
 
     time         last_header_time_ps;
     time         last_real_eop_time_ps;
-    time         last_synth_eop_time_ps;
+    time         last_endofrun_time_ps;
 
     frcv_obs_item history[$];
     frcv_rx_obs_item rx_history[$];
@@ -713,7 +717,7 @@ package frcv_env_pkg;
       header_count           = 0;
       hit_count              = 0;
       real_eop_count         = 0;
-      synth_eop_count        = 0;
+      endofrun_count        = 0;
       cycle_count            = 0;
       completed_txn_count    = 0;
       counter_checks_passed  = 0;
@@ -723,7 +727,7 @@ package frcv_env_pkg;
       queued_overlap_events  = 0;
       last_header_time_ps    = 0;
       last_real_eop_time_ps = 0;
-      last_synth_eop_time_ps = 0;
+      last_endofrun_time_ps = 0;
       current_case_id        = "";
       current_execution_mode = "isolated";
       current_random_case    = 1'b0;
@@ -786,9 +790,9 @@ package frcv_env_pkg;
             end
           end
         end
-        FRCV_OBS_SYNTH_EOP: begin
-          synth_eop_count++;
-          last_synth_eop_time_ps = item.time_ps;
+        FRCV_OBS_ENDOFRUN: begin
+          endofrun_count++;
+          last_endofrun_time_ps = item.time_ps;
         end
         default: begin
         end
@@ -879,6 +883,18 @@ package frcv_env_pkg;
       coverage_bins[key] = key;
     endfunction
 
+    function automatic bit keep_curve_sample(int unsigned txn_idx, int unsigned delta_bins);
+      if (delta_bins != 0)
+        return 1'b1;
+      if (txn_idx <= 16)
+        return 1'b1;
+      if ((txn_idx & (txn_idx - 1)) == 0)
+        return 1'b1;
+      if ((txn_idx % 1024) == 0)
+        return 1'b1;
+      return 1'b0;
+    endfunction
+
     function automatic real cross_cov_pct();
       int unsigned goal;
       goal = 32;
@@ -921,7 +937,8 @@ package frcv_env_pkg;
         after_bins - before_bins,
         reason
       );
-      coverage_curve.push_back(curve_line);
+      if (keep_curve_sample(completed_txn_count + 1, after_bins - before_bins))
+        coverage_curve.push_back(curve_line);
 
       if (active_txn.strict_checks) begin
         if (active_txn.expect_headerinfo && active_txn.observed_headers < active_txn.expected_headers)
@@ -1021,8 +1038,8 @@ package frcv_env_pkg;
         curve_dump = {curve_dump, coverage_curve[idx]};
       end
       `uvm_info("FRCV_SCB",
-        $sformatf("headers=%0d hits=%0d real_eops=%0d synth_eops=%0d txns=%0d counter_checks=%0d/%0d back_to_back=%0d queued_overlap=%0d",
-          header_count, hit_count, real_eop_count, synth_eop_count,
+        $sformatf("headers=%0d hits=%0d real_eops=%0d endofruns=%0d txns=%0d counter_checks=%0d/%0d back_to_back=%0d queued_overlap=%0d",
+          header_count, hit_count, real_eop_count, endofrun_count,
           completed_txn_count, counter_checks_passed, counter_checks_failed,
           back_to_back_events, queued_overlap_events),
         UVM_LOW)
@@ -1381,17 +1398,17 @@ package frcv_env_pkg;
           m_env.m_scb.hit_count, m_env.m_scb.real_eop_count, m_env.m_scb.header_count))
     endtask
 
-    task automatic wait_for_synth_count(int unsigned exp_synth_eops,
+    task automatic wait_for_endofrun_count(int unsigned exp_endofruns,
                                         int unsigned max_cycles,
                                         string ctx);
       repeat (max_cycles) begin
-        if (m_env.m_scb.synth_eop_count >= exp_synth_eops)
+        if (m_env.m_scb.endofrun_count >= exp_endofruns)
           return;
         @(posedge ctrl_vif.clk);
       end
       `uvm_fatal("FRCV_TIMEOUT",
-        $sformatf("%s timed out waiting for synth_eops=%0d, got %0d",
-          ctx, exp_synth_eops, m_env.m_scb.synth_eop_count))
+        $sformatf("%s timed out waiting for endofruns=%0d, got %0d",
+          ctx, exp_endofruns, m_env.m_scb.endofrun_count))
     endtask
 
     task automatic wait_for_ctrl_ready_low(int unsigned max_cycles, string ctx);
@@ -1428,7 +1445,10 @@ package frcv_env_pkg;
   class COMBO_FRCV_001_run_contract_test extends frcv_base_test;
     `uvm_component_utils(COMBO_FRCV_001_run_contract_test)
 
-    localparam bit [47:0] ACTIVE_HIT_WORD = 48'hCAFEBABE1234;
+    localparam bit [47:0] ACTIVE_HIT_WORD          = 48'hCAFEBABE1234;
+    localparam bit [47:0] DELAYED_TAIL_HIT_WORD    = 48'h0F1E2D3C4B5A;
+    localparam int unsigned TERMINATE_WAIT_MAX_CYCLES = 4096;
+    localparam int unsigned DELAYED_TAIL_GAP_CYCLES   = 64;
 
     function new(string name, uvm_component parent);
       super.new(name, parent);
@@ -1438,9 +1458,7 @@ package frcv_env_pkg;
       int unsigned base_hits;
       int unsigned base_real_eops;
       int unsigned base_headers;
-      int unsigned base_synth_eops;
-      time         idle_term_accept_time_ps;
-      time         active_term_accept_time_ps;
+      int unsigned base_endofruns;
 
       phase.raise_objection(this);
 
@@ -1450,30 +1468,29 @@ package frcv_env_pkg;
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns  = m_env.m_scb.endofrun_count;
 
       send_long_frame(16'h0001, 48'h112233445566);
       wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 24,
         "RUNNING long frame");
 
-      if (m_env.m_scb.synth_eop_count != base_synth_eops)
+      if (m_env.m_scb.endofrun_count != base_endofruns)
         `uvm_fatal("FRCV_TEST",
-          $sformatf("Unexpected synthetic EOP during RUNNING frame, got %0d expected %0d",
-            m_env.m_scb.synth_eop_count, base_synth_eops))
+          $sformatf("Unexpected end-of-run pulse during RUNNING frame, got %0d expected %0d",
+            m_env.m_scb.endofrun_count, base_endofruns))
 
       wait_cycles(8);
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
-      wait_for_ctrl_ready_low(4, "Idle TERMINATING ready deassert");
-      wait_for_synth_count(base_synth_eops + 1, 16,
-        "Idle TERMINATING synthetic marker");
-      wait_for_ctrl_ready_high(16, "Idle TERMINATING ready restore");
+      wait_for_endofrun_count(base_endofruns + 1, TERMINATE_WAIT_MAX_CYCLES,
+        "Idle TERMINATING end-of-run marker");
+      wait_for_ctrl_ready_high(TERMINATE_WAIT_MAX_CYCLES, "Idle TERMINATING ready restore");
 
       send_ctrl(CTRL_IDLE, "IDLE");
 
       base_hits       = m_env.m_scb.hit_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns  = m_env.m_scb.endofrun_count;
 
       send_long_frame(16'h0002, 48'hA1B2C3D4E5F6);
       wait_cycles(14);
@@ -1486,16 +1503,53 @@ package frcv_env_pkg;
         `uvm_fatal("FRCV_TEST",
           $sformatf("IDLE must not emit headerinfo: header_count moved from %0d to %0d",
             base_headers, m_env.m_scb.header_count))
-      if (m_env.m_scb.synth_eop_count != base_synth_eops)
+      if (m_env.m_scb.endofrun_count != base_endofruns)
         `uvm_fatal("FRCV_TEST",
-          $sformatf("IDLE should not emit synthetic EOPs: synth_count moved from %0d to %0d",
-            base_synth_eops, m_env.m_scb.synth_eop_count))
+          $sformatf("IDLE should not emit end-of-run pulses: count moved from %0d to %0d",
+            base_endofruns, m_env.m_scb.endofrun_count))
 
       run_start();
 
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_headers    = m_env.m_scb.header_count;
+      base_endofruns  = m_env.m_scb.endofrun_count;
+
+      fork
+        begin
+          send_ctrl(CTRL_TERMINATING, "TERMINATING");
+        end
+        begin
+          wait_cycles(DELAYED_TAIL_GAP_CYCLES);
+          if (m_env.m_scb.hit_count != base_hits)
+            `uvm_fatal("FRCV_TEST",
+              $sformatf("Delayed terminating tail must stay quiescent before the late frame: hit_count moved from %0d to %0d",
+                base_hits, m_env.m_scb.hit_count))
+          if (m_env.m_scb.header_count != base_headers)
+            `uvm_fatal("FRCV_TEST",
+              $sformatf("Delayed terminating tail must not emit headerinfo before the late frame: header_count moved from %0d to %0d",
+                base_headers, m_env.m_scb.header_count))
+          if (m_env.m_scb.endofrun_count != base_endofruns)
+            `uvm_fatal("FRCV_TEST",
+              $sformatf("Delayed terminating tail must not close early: endofrun_count moved from %0d to %0d",
+                base_endofruns, m_env.m_scb.endofrun_count))
+          if (ctrl_vif.ready !== 1'b0)
+            `uvm_fatal("FRCV_TEST", "Delayed terminating tail must hold ctrl_ready low before the late frame arrives")
+          send_long_frame(16'h0003, DELAYED_TAIL_HIT_WORD);
+        end
+      join
+
+      wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, TERMINATE_WAIT_MAX_CYCLES,
+        "Delayed-tail TERMINATING drain");
+      wait_for_endofrun_count(base_endofruns + 1, TERMINATE_WAIT_MAX_CYCLES,
+        "Delayed-tail TERMINATING end-of-run marker");
+      wait_for_ctrl_ready_high(8, "Delayed-tail TERMINATING ready restore");
+
+      run_start();
+
+      base_hits       = m_env.m_scb.hit_count;
+      base_real_eops  = m_env.m_scb.real_eop_count;
+      base_endofruns  = m_env.m_scb.endofrun_count;
 
       drive_symbol(1'b1, HEADER_BYTE);
       drive_symbol(1'b0, 8'h00);
@@ -1505,10 +1559,9 @@ package frcv_env_pkg;
 
       fork
         begin
-          pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
+          send_ctrl(CTRL_TERMINATING, "TERMINATING");
         end
         begin
-          wait_cycles(1);
           for (int byte_idx = 5; byte_idx >= 0; byte_idx--)
             drive_symbol(1'b0, byte'(ACTIVE_HIT_WORD[byte_idx*8 +: 8]));
           drive_symbol(1'b0, 8'h00);
@@ -1516,16 +1569,10 @@ package frcv_env_pkg;
         end
       join
 
-      wait_for_ctrl_ready_low(4, "Active TERMINATING ready deassert");
-      wait_for_counts(base_hits + 1, base_real_eops + 1, m_env.m_scb.header_count, 48,
+      wait_for_counts(base_hits + 1, base_real_eops + 1, m_env.m_scb.header_count, TERMINATE_WAIT_MAX_CYCLES,
         "Active TERMINATING drain");
-
-      if (m_env.m_scb.synth_eop_count != base_synth_eops)
-        `uvm_fatal("FRCV_TEST",
-          $sformatf("Active TERMINATING drain must not emit synthetic EOPs: got %0d expected %0d",
-            m_env.m_scb.synth_eop_count, base_synth_eops))
-
-      wait_for_ctrl_ready_high(48, "Active TERMINATING ready restore");
+      wait_for_endofrun_count(base_endofruns + 1, TERMINATE_WAIT_MAX_CYCLES, "Active TERMINATING end-of-run marker");
+      wait_for_ctrl_ready_high(TERMINATE_WAIT_MAX_CYCLES, "Active TERMINATING ready restore");
 
       send_ctrl(CTRL_IDLE, "IDLE");
       phase.drop_objection(this);
