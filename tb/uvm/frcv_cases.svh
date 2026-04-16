@@ -4,11 +4,16 @@
     string case_id;
     string build_tag;
     string execution_mode;
+    string effort_mode;
     bit    require_case_id;
     localparam int unsigned MAX_DOC_ITERATIONS_ISOLATED = 128;
     localparam int unsigned MAX_DOC_ITERATIONS_CONTINUOUS = 32;
     localparam int unsigned MAX_DOC_PAYLOAD_BYTES_ISOLATED = 8192;
     localparam int unsigned MAX_DOC_PAYLOAD_BYTES_CONTINUOUS = 2048;
+    localparam int unsigned MAX_DOC_ITERATIONS_ISOLATED_EXTENSIVE = 100000;
+    localparam int unsigned MAX_DOC_ITERATIONS_CONTINUOUS_EXTENSIVE = 512;
+    localparam int unsigned MAX_DOC_PAYLOAD_BYTES_ISOLATED_EXTENSIVE = 10000000;
+    localparam int unsigned MAX_DOC_PAYLOAD_BYTES_CONTINUOUS_EXTENSIVE = 131072;
 
     covergroup doc_case_cg with function sample(int unsigned global_case_idx,
                                                 int unsigned bucket_case_idx,
@@ -31,6 +36,7 @@
       case_id = "";
       build_tag = "CFG_A";
       execution_mode = "isolated";
+      effort_mode = "practical";
       require_case_id = 1'b1;
       doc_case_cg = new;
     endfunction
@@ -41,6 +47,7 @@
         `uvm_fatal("FRCV_CASE", "Missing +FRCV_CASE_ID=<doc_case_id>")
       void'($value$plusargs("FRCV_BUILD_TAG=%s", build_tag));
       void'($value$plusargs("FRCV_EXEC_MODE=%s", execution_mode));
+      void'($value$plusargs("FRCV_EFFORT=%s", effort_mode));
       if (case_id != "")
         doc_case_cg.set_inst_name($sformatf("doc_case_cg_%s", case_id));
     endfunction
@@ -67,7 +74,7 @@
     task automatic expect_no_new_activity(int unsigned base_hits,
                                           int unsigned base_real_eops,
                                           int unsigned base_headers,
-                                          int unsigned base_synth_eops,
+                                          int unsigned base_endofruns,
                                           int unsigned settle_cycles,
                                           string ctx);
       wait_cycles(settle_cycles);
@@ -83,10 +90,10 @@
         `uvm_fatal("FRCV_CASE",
           $sformatf("%s expected header_count=%0d got %0d",
             ctx, base_headers, m_env.m_scb.header_count))
-      if (m_env.m_scb.synth_eop_count != base_synth_eops)
+      if (m_env.m_scb.endofrun_count != base_endofruns)
         `uvm_fatal("FRCV_CASE",
-          $sformatf("%s expected synth_eop_count=%0d got %0d",
-            ctx, base_synth_eops, m_env.m_scb.synth_eop_count))
+          $sformatf("%s expected endofrun_count=%0d got %0d",
+            ctx, base_endofruns, m_env.m_scb.endofrun_count))
     endtask
 
     task automatic send_long_zero_hit_frame(int unsigned frame_number);
@@ -149,7 +156,7 @@
       int unsigned base_hits;
       int unsigned base_real_eops;
       int unsigned base_headers;
-      int unsigned base_synth_eops;
+      int unsigned base_endofruns;
 
       wait_for_reset_release();
       run_start();
@@ -158,9 +165,9 @@
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       send_long_frame(16'h0005, 48'h010203040506);
-      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_synth_eops, 20, case_id);
+      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 20, case_id);
     endtask
 
     task automatic do_b006_run_prepare_clears_parser_state();
@@ -179,34 +186,34 @@
       int unsigned base_hits;
       int unsigned base_real_eops;
       int unsigned base_headers;
-      int unsigned base_synth_eops;
+      int unsigned base_endofruns;
 
       wait_for_reset_release();
       run_start();
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       send_ctrl(CTRL_TERMINATING, "TERMINATING");
       wait_for_ctrl_ready_low(4, case_id);
-      wait_for_synth_count(base_synth_eops + 1, 16, case_id);
+      wait_for_endofrun_count(base_endofruns + 1, 16, case_id);
       wait_for_ctrl_ready_high(24, case_id);
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       send_long_frame(16'h0009, 48'h0A0B0C0D0E0F);
-      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_synth_eops, 20, case_id);
+      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 20, case_id);
     endtask
 
     task automatic do_b010_terminating_allows_open_frame_to_finish();
       int unsigned base_hits;
       int unsigned base_real_eops;
-      int unsigned base_synth_eops;
+      int unsigned base_endofruns;
       bit [47:0]   active_hit_word;
 
       wait_for_reset_release();
       run_start();
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       active_hit_word = 48'hCAFEBABE1234;
 
       drive_symbol(1'b1, HEADER_BYTE);
@@ -231,8 +238,7 @@
       join
 
       wait_for_counts(base_hits + 1, base_real_eops + 1, m_env.m_scb.header_count, 48, case_id);
-      if (m_env.m_scb.synth_eop_count != base_synth_eops)
-        `uvm_fatal("FRCV_CASE", "Active terminating drain must not emit a synthetic EOP")
+      wait_for_endofrun_count(base_endofruns + 1, 48, case_id);
       wait_for_ctrl_ready_high(48, case_id);
     endtask
 
@@ -240,7 +246,7 @@
       int unsigned base_hits;
       int unsigned base_real_eops;
       int unsigned base_headers;
-      int unsigned base_synth_eops;
+      int unsigned base_endofruns;
 
       wait_for_reset_release();
       pulse_ctrl(9'b000000000, "ILLEGAL_ZERO");
@@ -248,27 +254,27 @@
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       send_long_frame(16'h0011, 48'h123456789ABC);
-      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_synth_eops, 20, case_id);
+      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 20, case_id);
     endtask
 
     task automatic do_b036_data_byte_without_kchar_no_start();
       int unsigned base_hits;
       int unsigned base_real_eops;
       int unsigned base_headers;
-      int unsigned base_synth_eops;
+      int unsigned base_endofruns;
 
       wait_for_reset_release();
       run_start();
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       drive_symbol(1'b0, HEADER_BYTE);
       drive_symbol(1'b0, 8'h00);
       drive_symbol(1'b0, 8'h24);
-      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_synth_eops, 12, case_id);
+      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 12, case_id);
     endtask
 
     task automatic do_b039_long_zero_hit_frame_headerinfo_pulse();
@@ -313,25 +319,25 @@
       int unsigned base_hits;
       int unsigned base_real_eops;
       int unsigned base_headers;
-      int unsigned base_synth_eops;
+      int unsigned base_endofruns;
 
       wait_for_reset_release();
       run_start();
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       drive_rx_symbol(1'b0, 1'b1, HEADER_BYTE);
       drive_rx_symbol(1'b0, 1'b0, 8'h00);
       drive_rx_symbol(1'b0, 1'b0, 8'h19);
-      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_synth_eops, 12, case_id);
+      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 12, case_id);
     endtask
 
     task automatic do_e020_midframe_valid_low_does_not_pause_parser();
       int unsigned base_hits;
       int unsigned base_real_eops;
       int unsigned base_headers;
-      int unsigned base_synth_eops;
+      int unsigned base_endofruns;
       bit [47:0]   partial_hit_word;
 
       wait_for_reset_release();
@@ -339,7 +345,7 @@
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       partial_hit_word = 48'h001122334455;
       drive_symbol(1'b1, HEADER_BYTE);
       drive_symbol(1'b0, 8'h00);
@@ -350,7 +356,7 @@
         drive_symbol(1'b0, byte'(partial_hit_word[byte_idx*8 +: 8]));
       drive_symbol(1'b0, 8'h00);
       drive_symbol(1'b0, 8'h00);
-      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_synth_eops, 16, case_id);
+      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 16, case_id);
     endtask
 
     task automatic do_x014_ctrl_allzero_word();
@@ -361,16 +367,16 @@
       int unsigned base_hits;
       int unsigned base_real_eops;
       int unsigned base_headers;
-      int unsigned base_synth_eops;
+      int unsigned base_endofruns;
 
       wait_for_reset_release();
       run_start();
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
       base_headers    = m_env.m_scb.header_count;
-      base_synth_eops = m_env.m_scb.synth_eop_count;
+      base_endofruns = m_env.m_scb.endofrun_count;
       drive_symbol(1'b1, HEADER_BYTE);
-      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_synth_eops, 12, case_id);
+      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 12, case_id);
     endtask
 
     function automatic string lower_string(string text);
@@ -546,12 +552,22 @@
     endfunction
 
     function automatic int unsigned doc_iteration_cap();
+      if (effort_mode == "extensive") begin
+        if (execution_mode == "isolated")
+          return MAX_DOC_ITERATIONS_ISOLATED_EXTENSIVE;
+        return MAX_DOC_ITERATIONS_CONTINUOUS_EXTENSIVE;
+      end
       if (execution_mode == "isolated")
         return MAX_DOC_ITERATIONS_ISOLATED;
       return MAX_DOC_ITERATIONS_CONTINUOUS;
     endfunction
 
     function automatic int unsigned doc_payload_cap();
+      if (effort_mode == "extensive") begin
+        if (execution_mode == "isolated")
+          return MAX_DOC_PAYLOAD_BYTES_ISOLATED_EXTENSIVE;
+        return MAX_DOC_PAYLOAD_BYTES_CONTINUOUS_EXTENSIVE;
+      end
       if (execution_mode == "isolated")
         return MAX_DOC_PAYLOAD_BYTES_ISOLATED;
       return MAX_DOC_PAYLOAD_BYTES_CONTINUOUS;
@@ -809,8 +825,8 @@
       `uvm_info(
         "FRCV_CASE",
         $sformatf(
-          "DOC_CASE_ENGINE_V2 case=%s build=%s global_case_idx=%0d bucket_case_idx=%0d",
-          case_id, build_tag, global_case_index(), bucket_case_index()
+          "DOC_CASE_ENGINE_V2 case=%s build=%s effort=%s global_case_idx=%0d bucket_case_idx=%0d",
+          case_id, build_tag, effort_mode, global_case_index(), bucket_case_index()
         ),
         UVM_NONE
       )
@@ -1015,8 +1031,8 @@
       phase.raise_objection(this);
       wait_for_reset_release();
       $display(
-        "DOC_CASE_LIST_ENGINE_V1 mode=%s build=%s seq=%s case_count=%0d iter_cap=%0d payload_cap=%0d",
-        execution_mode, build_tag, sequence_name, case_queue.size(), doc_iteration_cap(), doc_payload_cap()
+        "DOC_CASE_LIST_ENGINE_V1 mode=%s build=%s effort=%s seq=%s case_count=%0d iter_cap=%0d payload_cap=%0d",
+        execution_mode, build_tag, effort_mode, sequence_name, case_queue.size(), doc_iteration_cap(), doc_payload_cap()
       );
       foreach (case_queue[idx]) begin
         run_named_case(case_queue[idx]);
@@ -1030,17 +1046,20 @@
     `uvm_component_utils(frcv_cross_bucket_test)
 
     string cross_plan;
+    int unsigned super_long_txns_override;
 
     function new(string name, uvm_component parent);
       super.new(name, parent);
       require_case_id = 1'b0;
       execution_mode = "cross";
       cross_plan = "GOOD_ERROR_GOOD";
+      super_long_txns_override = 0;
     endfunction
 
     function void build_phase(uvm_phase phase);
       super.build_phase(phase);
       void'($value$plusargs("FRCV_CROSS_PLAN=%s", cross_plan));
+      void'($value$plusargs("FRCV_SUPER_LONG_TXNS=%d", super_long_txns_override));
     endfunction
 
     task automatic run_cross_frame(
@@ -1058,7 +1077,12 @@
       string stop_boundary = "none",
       int unsigned terminate_after_bytes = 32'hffff_ffff
     );
+      int unsigned expected_hits;
+      bit          expect_error0;
+
       wait_cycles(start_delay_cycles);
+      expected_hits = (frame_len == 0) ? 0 : 1;
+      expect_error0 = inject_parity_error || inject_decode_error;
       scb_expect_txn(
         case_name,
         execution_mode,
@@ -1068,13 +1092,13 @@
         1'b0,
         short_mode,
         frame_len,
-        frame_len,
+        expected_hits,
         1,
-        (frame_len == 0) ? 0 : 1,
-        0,
+        expected_hits != 0,
+        inject_bad_crc ? 1 : 0,
+        expect_error0,
         1'b0,
-        1'b0,
-        1'b0,
+        inject_loss_sync,
         queued_overlap,
         stop_boundary,
         6
@@ -1130,13 +1154,107 @@
       end
     endtask
 
+    task automatic run_super_long_counter_soak();
+      int unsigned total_txns;
+      bit          short_mode;
+      int unsigned frame_len;
+      int unsigned terminate_after_bytes;
+      bit          queued_overlap;
+      int unsigned start_delay;
+
+      total_txns = (effort_mode == "extensive") ? 32768 : 4096;
+      if (super_long_txns_override != 0)
+        total_txns = super_long_txns_override;
+      for (int unsigned iter = 0; iter < total_txns; iter++) begin
+        short_mode = iter[0];
+        frame_len = 1;
+        queued_overlap = (iter != 0) && (($urandom_range(0, 3)) != 0);
+        start_delay = $urandom_range(0, 1);
+        terminate_after_bytes = 32'hffff_ffff;
+
+        case (iter[1:0])
+          2'd0: begin
+            run_cross_frame(
+              "P118_seed01_clean_mix_100k_cycles",
+              "SUPER_LONG_COUNTER_SOAK",
+              16'hb000 + iter[15:0],
+              short_mode,
+              frame_len,
+              1'b0,
+              1'b0,
+              1'b0,
+              1'b0,
+              start_delay,
+              queued_overlap
+            );
+          end
+          2'd1: begin
+            run_cross_frame(
+              "P120_seed03_error_mix_100k_cycles",
+              "SUPER_LONG_COUNTER_SOAK",
+              16'hc000 + iter[15:0],
+              short_mode,
+              frame_len,
+              1'b1,
+              1'b0,
+              1'b0,
+              1'b0,
+              start_delay,
+              queued_overlap
+            );
+          end
+          2'd2: begin
+            terminate_after_bytes = payload_byte_count(short_mode, frame_len) / 2;
+            run_cross_frame(
+              "P121_seed04_stop_mix_100k_cycles",
+              "SUPER_LONG_COUNTER_SOAK",
+              16'hd000 + iter[15:0],
+              short_mode,
+              frame_len,
+              1'b0,
+              1'b0,
+              1'b0,
+              1'b0,
+              start_delay,
+              queued_overlap,
+              "mid_payload",
+              terminate_after_bytes
+            );
+          end
+          default: begin
+            terminate_after_bytes = payload_byte_count(short_mode, frame_len) / 2;
+            run_cross_frame(
+              "P125_seed08_badcrc_mix_100k_cycles",
+              "SUPER_LONG_COUNTER_SOAK",
+              16'he000 + iter[15:0],
+              short_mode,
+              frame_len,
+              1'b1,
+              1'b0,
+              1'b0,
+              1'b0,
+              start_delay,
+              queued_overlap,
+              "mid_payload",
+              terminate_after_bytes
+            );
+          end
+        endcase
+
+        if ((iter != 0) && ((iter % 2048) == 0))
+          wait_cycles($urandom_range(1, 4));
+      end
+    endtask
+
     task run_phase(uvm_phase phase);
       phase.raise_objection(this);
       wait_for_reset_release();
       run_start_for_mode();
-      $display("FRCV_CROSS_ENGINE_V1 plan=%s build=%s", cross_plan, build_tag);
+      $display("FRCV_CROSS_ENGINE_V1 plan=%s build=%s effort=%s", cross_plan, build_tag, effort_mode);
       if (cross_plan == "INTERLEAVE_MIX")
         run_interleave_mix();
+      else if (cross_plan == "SUPER_LONG_COUNTER_SOAK")
+        run_super_long_counter_soak();
       else
         run_good_error_good();
       wait_cycles(12);

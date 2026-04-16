@@ -25,6 +25,8 @@ module tb_top;
   localparam int TB_CSR_ADDR_WIDTH = `TB_CSR_ADDR_WIDTH;
   localparam int TB_MODE_HALT      = `TB_MODE_HALT;
   localparam int TB_DEBUG_LV       = `TB_DEBUG_LV;
+  time global_timeout = 2_000_000ns;
+  int unsigned global_timeout_ns;
 
   logic clk = 1'b0;
   logic rst_init = 1'b1;
@@ -32,6 +34,7 @@ module tb_top;
 
   logic [TB_CHANNEL_WIDTH-1:0]  dut_rx_channel;
   logic [TB_CHANNEL_WIDTH-1:0]  dut_hit_channel;
+  logic                         dut_hit_endofrun;
   logic [TB_CHANNEL_WIDTH-1:0]  dut_headerinfo_channel;
   logic [TB_CSR_ADDR_WIDTH-1:0] dut_csr_address;
   logic                         dbg_enable;
@@ -62,6 +65,7 @@ module tb_top;
   assign dut_rx_channel  = rx_if.channel[TB_CHANNEL_WIDTH-1:0];
   assign dut_csr_address = csr_if.address[TB_CSR_ADDR_WIDTH-1:0];
   assign out_if.hit_channel        = {{(8-TB_CHANNEL_WIDTH){1'b0}}, dut_hit_channel};
+  assign out_if.hit_endofrun       = dut_hit_endofrun;
   assign out_if.headerinfo_channel = {{(8-TB_CHANNEL_WIDTH){1'b0}}, dut_headerinfo_channel};
   assign dbg_if.enable             = dbg_enable;
   assign dbg_if.receiver_go        = dbg_receiver_go;
@@ -85,6 +89,7 @@ module tb_top;
     .aso_hit_type0_channel       (dut_hit_channel),
     .aso_hit_type0_startofpacket (out_if.hit_sop),
     .aso_hit_type0_endofpacket   (out_if.hit_eop),
+    .aso_hit_type0_endofrun      (dut_hit_endofrun),
     .aso_hit_type0_error         (out_if.hit_error),
     .aso_hit_type0_data          (out_if.hit_data),
     .aso_hit_type0_valid         (out_if.hit_valid),
@@ -163,7 +168,10 @@ module tb_top;
   end
 
   initial begin
-    #(2_000_000ns);
+    global_timeout_ns = 2_000_000;
+    void'($value$plusargs("FRCV_TIMEOUT_NS=%d", global_timeout_ns));
+    global_timeout = global_timeout_ns * 1ns;
+    #(global_timeout);
     `uvm_fatal("TB_TOP", "Global timeout reached")
   end
 endmodule

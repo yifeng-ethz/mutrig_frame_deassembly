@@ -53,6 +53,7 @@ interface frcv_out_if(input logic clk, input logic rst);
   logic [7:0]  hit_channel;
   logic        hit_sop;
   logic        hit_eop;
+  logic        hit_endofrun;
   logic [2:0]  hit_error;
   logic [44:0] hit_data;
   logic        hit_valid;
@@ -62,7 +63,7 @@ interface frcv_out_if(input logic clk, input logic rst);
   logic [7:0]  headerinfo_channel;
 
   modport mon (
-    input hit_channel, hit_sop, hit_eop, hit_error, hit_data, hit_valid,
+    input hit_channel, hit_sop, hit_eop, hit_endofrun, hit_error, hit_data, hit_valid,
           headerinfo_data, headerinfo_valid, headerinfo_channel, clk, rst
   );
 endinterface
