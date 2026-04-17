@@ -185,3 +185,10 @@
 | P130_seed13_upgrade_gap_observation_bundle | K | seed 13 with randomized stop plus candidate post-stop headers | reproduces and freezes current termination limitation | upgrade-plan evidence anchor |
 
 **Row count:** 130 cases (`P001-P130`).
+
+## 11. Supplemental Long-Run Requirement
+
+- `P118-P130` remain the deterministic seed anchors used to reproduce known long-run patterns.
+- Long-run closure must also include randomized all-bucket sequences launched through `tb/scripts/run_full_random_parallel.py`.
+- That runner samples documented cases from BASIC, EDGE, PROF, and ERROR with replacement, executes them in continuous `all_buckets_frame` mode, and is intended to run for tens of minutes per worker in parallel.
+- Any new long-run scoreboarding drift or unexpected-output failures found there must update `BUG_HISTORY.md`, `DV_REPORT.json`, and the generated `REPORT/cross/` evidence.

@@ -24,14 +24,14 @@ license_check:
 
 compile: license_check $(WORK)/_vmake
 
-$(WORK)/_vmake: $(IP_SRC)/crc16_calc.vhd \
-                $(IP_SRC)/frame_rcv_ip.vhd \
+$(WORK)/_vmake: $(IP_SRC)/rtl/crc16_calc.vhd \
+                $(IP_SRC)/rtl/frame_rcv_ip.vhd \
                 tb_frame_rcv_ip.vhd
 	rm -rf $(WORK)
 	$(VLIB) $(WORK)
 	$(VMAP) $(WORK) $(WORK)
-	$(VCOM) -2008 -work $(WORK) $(IP_SRC)/crc16_calc.vhd
-	$(VCOM) -2008 -work $(WORK) $(IP_SRC)/frame_rcv_ip.vhd
+	$(VCOM) -2008 -work $(WORK) $(IP_SRC)/rtl/crc16_calc.vhd
+	$(VCOM) -2008 -work $(WORK) $(IP_SRC)/rtl/frame_rcv_ip.vhd
 	$(VCOM) -2008 -work $(WORK) tb_frame_rcv_ip.vhd
 	@touch $@
 

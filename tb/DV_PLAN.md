@@ -1,8 +1,8 @@
 # DV Plan: mutrig_frame_deassembly
 
 **DUT:** `frame_rcv_ip`  
-**IP packaging file:** `mutrig_frame_deassembly_hw.tcl`  
-**Primary RTL:** `mutrig_frame_deassembly/frame_rcv_ip.vhd`  
+**IP packaging file:** `script/mutrig_frame_deassembly_hw.tcl`  
+**Primary RTL:** `rtl/frame_rcv_ip.vhd`  
 **Date:** 2026-04-15  
 **Methodology:** Phase-0 DV planning per the local Codex `dv-workflow` and the Claude `dv-workflow` guidance  
 **Status:** Planning package for harness implementation signoff
@@ -24,7 +24,7 @@ In scope:
 - actual counter/readback behavior in `proc_avmm_slave_csr`
 - actual output formatting in `proc_output_pkt_hits*` and `proc_output_header_info*`
 - the termination mismatch called out in `RUN_SEQ_UPGRADE_PLAN.md`
-- Qsys-visible contract from `mutrig_frame_deassembly_hw.tcl`
+- Qsys-visible contract from `script/mutrig_frame_deassembly_hw.tcl`
 
 Out of scope:
 

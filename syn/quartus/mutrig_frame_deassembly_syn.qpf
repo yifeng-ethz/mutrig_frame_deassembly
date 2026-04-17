@@ -1,0 +1,12 @@
+# -------------------------------------------------------------------------- #
+#
+# Quartus Prime
+# Version 18.1.0 Build 625 09/12/2018 SJ Standard Edition
+# Date created = 11:00:00  April 17, 2026
+#
+# -------------------------------------------------------------------------- #
+
+QUARTUS_VERSION = "18.1"
+DATE = "11:00:00  April 17, 2026"
+
+PROJECT_REVISION = "mutrig_frame_deassembly_syn_cfg_a"

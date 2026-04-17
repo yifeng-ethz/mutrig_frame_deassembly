@@ -35,16 +35,19 @@ DEBUG_LV ?= 0
 BUILD_TAG ?= CFG_A
 EXTRA_PLUSARGS ?=
 RUN_ID_OVERRIDE ?=
+WORK_SUFFIX ?=
 SEED        ?= 1
 VERBOSITY   ?= UVM_MEDIUM
 TB_TOP      := tb_top
 VCOM_COV    ?= -cover bcesft
 VLOG_COV    ?= +cover=bcesft
 
-RTL_SRC = $(if $(filter before,$(RTL_VARIANT)),$(BUILD_DIR)/frame_rcv_ip.vhd,$(IP_SRC)/frame_rcv_ip.vhd)
+RTL_DIR = $(IP_SRC)/rtl
+RTL_HEAD_PATH ?= rtl/frame_rcv_ip.vhd
+RTL_SRC = $(if $(filter before,$(RTL_VARIANT)),$(BUILD_DIR)/frame_rcv_ip.vhd,$(RTL_DIR)/frame_rcv_ip.vhd)
 RUN_ID  = $(if $(RUN_ID_OVERRIDE),$(RUN_ID_OVERRIDE),$(if $(CASE_ID),$(CASE_ID),$(TEST)))
 TB_CFG_TAG = cw$(CHANNEL_WIDTH)_aw$(CSR_ADDR_WIDTH)_mh$(MODE_HALT)_dl$(DEBUG_LV)
-WORK_DIR = $(UVM_DIR)/work_$(RTL_VARIANT)_$(TB_CFG_TAG)
+WORK_DIR = $(UVM_DIR)/work_$(RTL_VARIANT)_$(TB_CFG_TAG)$(if $(WORK_SUFFIX),_$(WORK_SUFFIX),)
 BUILD_DIR = $(WORK_DIR)/build
 
 UVM_SRCS = \
@@ -53,7 +56,7 @@ UVM_SRCS = \
 	$(UVM_DIR)/frcv_env_pkg.sv \
 	$(UVM_DIR)/tb_top.sv
 
-.PHONY: license_check compile run run_sim run_isolated run_bucket_frame run_all_buckets_frame cov_report_case cov_merge cov_report_total run_before_expected_fail run_after prove_delta clean
+.PHONY: license_check compile run run_sim run_case run_case_list run_cross run_isolated run_bucket_frame run_all_buckets_frame cov_report_case cov_merge cov_report_total run_before_expected_fail run_after prove_delta clean
 
 license_check:
 	@echo "═══ Checking Mentor floating license at $(ETH_LIC_SERVER) ═══"
@@ -62,17 +65,17 @@ license_check:
 
 compile: license_check $(WORK_DIR)/.compiled
 
-$(WORK_DIR)/.compiled: $(IP_SRC)/crc16_calc.vhd $(IP_SRC)/frame_rcv_ip.vhd $(UVM_SRCS)
+$(WORK_DIR)/.compiled: $(RTL_DIR)/crc16_calc.vhd $(RTL_DIR)/frame_rcv_ip.vhd $(UVM_SRCS)
 	@echo "═══ Compiling frame_rcv_ip UVM bench ($(RTL_VARIANT)) cfg=$(TB_CFG_TAG) build=$(BUILD_TAG) ═══"
 	@rm -rf $(WORK_DIR)
 	@mkdir -p $(WORK_DIR) $(BUILD_DIR) $(LOG_DIR) $(COV_DIR)
 	@if [ "$(RTL_VARIANT)" = "before" ]; then \
-	  git -C $(IP_SRC) show HEAD:frame_rcv_ip.vhd > $(BUILD_DIR)/frame_rcv_ip.vhd; \
+	  git -C $(IP_SRC) show HEAD:$(RTL_HEAD_PATH) > $(BUILD_DIR)/frame_rcv_ip.vhd; \
 	fi
 	@cd $(WORK_DIR) && $(VLIB) work
 	@cd $(WORK_DIR) && $(VMAP) -c > /dev/null
 	@cd $(WORK_DIR) && $(VMAP) -modelsimini modelsim.ini work work > /dev/null
-	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini modelsim.ini -work work $(IP_SRC)/crc16_calc.vhd
+	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini modelsim.ini -work work $(RTL_DIR)/crc16_calc.vhd
 	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini modelsim.ini -work work $(RTL_SRC)
 	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(UVM_DIR)/frcv_if.sv
 	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work -mfcu \
@@ -87,6 +90,15 @@ $(WORK_DIR)/.compiled: $(IP_SRC)/crc16_calc.vhd $(IP_SRC)/frame_rcv_ip.vhd $(UVM
 	@touch $@
 
 run: compile run_sim
+
+run_case:
+	@$(MAKE) -s run TEST=frcv_doc_case_test CASE_ID=$(CASE_ID) SEED=$(SEED)
+
+run_case_list:
+	@$(MAKE) -s run TEST=frcv_doc_case_list_test SEED=$(SEED)
+
+run_cross:
+	@$(MAKE) -s run TEST=frcv_cross_bucket_test SEED=$(SEED)
 
 run_sim:
 	@echo "=== Running $(RUN_ID) test=$(TEST) variant=$(RTL_VARIANT) build=$(BUILD_TAG) cfg=$(TB_CFG_TAG) seed=$(SEED) ==="
@@ -141,4 +153,4 @@ run_after:
 prove_delta: run_before_expected_fail run_after
 
 clean:
-	rm -rf $(WORK_DIR) $(UVM_DIR)/work_before $(UVM_DIR)/work_after $(LOG_DIR) $(UVM_DIR)/cov_before $(UVM_DIR)/cov_after transcript vsim.wlf
+	rm -rf $(UVM_DIR)/work_* $(LOG_DIR) $(UVM_DIR)/cov_* transcript vsim.wlf

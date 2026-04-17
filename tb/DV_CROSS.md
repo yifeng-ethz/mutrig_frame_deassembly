@@ -2,8 +2,8 @@
 
 This file defines the functional coverage contract that the UVM environment must implement for `frame_rcv_ip`. The bins and crosses are derived from:
 
-- `frame_rcv_ip.vhd`
-- `mutrig_frame_deassembly_hw.tcl`
+- `rtl/frame_rcv_ip.vhd`
+- `script/mutrig_frame_deassembly_hw.tcl`
 - `RUN_SEQ_UPGRADE_PLAN.md`
 
 The goal is not raw bin count inflation. Every coverpoint below is intended to prove a real parser, control, or packaging contract path.
@@ -88,3 +88,7 @@ The goal is not raw bin count inflation. Every coverpoint below is intended to p
    - the all-buckets-frame run executes buckets in bucket order and cases in case-id order without restarting the DUT between cases
    - directed cases contribute one transaction per case in these continuous frames
    - random cases contribute several transactions per case in these continuous frames
+5. The in-bench `SUPER_LONG_COUNTER_SOAK` run is only a seed anchor, not full closure:
+   - it is allowed to remain as a deterministic regression probe
+   - long-run closure must also include `tb/scripts/run_full_random_parallel.py`
+   - that runner draws documented cases from all buckets with replacement, executes `frcv_doc_case_list_test` in `all_buckets_frame` mode, and is intended to run for tens of minutes per worker in parallel
