@@ -1,6 +1,6 @@
 # mutrig_frame_deassembly — REPORT index
 
-**DUT:** `frame_rcv_ip` &nbsp; **Date:** `2026-04-16` &nbsp;
+**DUT:** `frame_rcv_ip` &nbsp; **Date:** `2026-04-17` &nbsp;
 **RTL variant:** `after` &nbsp; **Seed:** `1`
 
 ## Legend
@@ -20,41 +20,40 @@
 
 ## Cross / continuous-frame runs
 
-| status | run_id | kind | build | bucket | seq | txns | cross_pct |
-|:---:|---|---|---|---|---|---:|---:|
-| ❌ | [`all_buckets_frame_cfg_a`](cross/all_buckets_frame_cfg_a.md) | all_buckets_frame | CFG_A | - | ALL_CFG_A | 800 | 65.62 |
-| ⚠️ | [`all_buckets_frame_cfg_b`](cross/all_buckets_frame_cfg_b.md) | all_buckets_frame | CFG_B | - | ALL_CFG_B | 76 | 40.62 |
-| ⚠️ | [`all_buckets_frame_cfg_c`](cross/all_buckets_frame_cfg_c.md) | all_buckets_frame | CFG_C | - | ALL_CFG_C | 36 | 40.62 |
-| ✅ | [`all_buckets_frame_cfg_d`](cross/all_buckets_frame_cfg_d.md) | all_buckets_frame | CFG_D | - | ALL_CFG_D | 27 | 59.38 |
-| ⚠️ | [`all_buckets_frame_cfg_e`](cross/all_buckets_frame_cfg_e.md) | all_buckets_frame | CFG_E | - | ALL_CFG_E | 66 | 40.62 |
-| ⚠️ | [`all_buckets_frame_cfg_f`](cross/all_buckets_frame_cfg_f.md) | all_buckets_frame | CFG_F | - | ALL_CFG_F | 3 | 37.5 |
-| ⚠️ | [`all_buckets_frame_cfg_g`](cross/all_buckets_frame_cfg_g.md) | all_buckets_frame | CFG_G | - | ALL_CFG_G | 17 | 37.5 |
-| ❌ | [`bucket_frame_basic_cfg_a`](cross/bucket_frame_basic_cfg_a.md) | bucket_frame | CFG_A | BASIC | BASIC_CFG_A | 87 | 59.38 |
-| ⚠️ | [`bucket_frame_basic_cfg_b`](cross/bucket_frame_basic_cfg_b.md) | bucket_frame | CFG_B | BASIC | BASIC_CFG_B | 1 | 34.38 |
-| ❌ | [`bucket_frame_edge_cfg_a`](cross/bucket_frame_edge_cfg_a.md) | bucket_frame | CFG_A | EDGE | EDGE_CFG_A | 61 | 40.62 |
-| ⚠️ | [`bucket_frame_edge_cfg_b`](cross/bucket_frame_edge_cfg_b.md) | bucket_frame | CFG_B | EDGE | EDGE_CFG_B | 5 | 37.5 |
-| ⚠️ | [`bucket_frame_edge_cfg_c`](cross/bucket_frame_edge_cfg_c.md) | bucket_frame | CFG_C | EDGE | EDGE_CFG_C | 3 | 37.5 |
-| ⚠️ | [`bucket_frame_edge_cfg_d`](cross/bucket_frame_edge_cfg_d.md) | bucket_frame | CFG_D | EDGE | EDGE_CFG_D | 1 | 34.38 |
-| ⚠️ | [`bucket_frame_edge_cfg_e`](cross/bucket_frame_edge_cfg_e.md) | bucket_frame | CFG_E | EDGE | EDGE_CFG_E | 1 | 34.38 |
-| ⚠️ | [`bucket_frame_edge_cfg_f`](cross/bucket_frame_edge_cfg_f.md) | bucket_frame | CFG_F | EDGE | EDGE_CFG_F | 1 | 34.38 |
-| ❌ | [`bucket_frame_error_cfg_a`](cross/bucket_frame_error_cfg_a.md) | bucket_frame | CFG_A | ERROR | ERROR_CFG_A | 101 | 62.5 |
-| ⚠️ | [`bucket_frame_error_cfg_b`](cross/bucket_frame_error_cfg_b.md) | bucket_frame | CFG_B | ERROR | ERROR_CFG_B | 9 | 46.88 |
-| ⚠️ | [`bucket_frame_error_cfg_c`](cross/bucket_frame_error_cfg_c.md) | bucket_frame | CFG_C | ERROR | ERROR_CFG_C | 1 | 34.38 |
-| ⚠️ | [`bucket_frame_error_cfg_d`](cross/bucket_frame_error_cfg_d.md) | bucket_frame | CFG_D | ERROR | ERROR_CFG_D | 8 | 37.5 |
-| ⚠️ | [`bucket_frame_error_cfg_e`](cross/bucket_frame_error_cfg_e.md) | bucket_frame | CFG_E | ERROR | ERROR_CFG_E | 1 | 34.38 |
-| ⚠️ | [`bucket_frame_error_cfg_f`](cross/bucket_frame_error_cfg_f.md) | bucket_frame | CFG_F | ERROR | ERROR_CFG_F | 1 | 34.38 |
-| ⚠️ | [`bucket_frame_error_cfg_g`](cross/bucket_frame_error_cfg_g.md) | bucket_frame | CFG_G | ERROR | ERROR_CFG_G | 1 | 34.38 |
-| ✅ | [`bucket_frame_prof_cfg_a`](cross/bucket_frame_prof_cfg_a.md) | bucket_frame | CFG_A | PROF | PROF_CFG_A | 569 | 65.62 |
-| ⚠️ | [`bucket_frame_prof_cfg_b`](cross/bucket_frame_prof_cfg_b.md) | bucket_frame | CFG_B | PROF | PROF_CFG_B | 61 | 40.62 |
-| ⚠️ | [`bucket_frame_prof_cfg_c`](cross/bucket_frame_prof_cfg_c.md) | bucket_frame | CFG_C | PROF | PROF_CFG_C | 32 | 37.5 |
-| ✅ | [`bucket_frame_prof_cfg_d`](cross/bucket_frame_prof_cfg_d.md) | bucket_frame | CFG_D | PROF | PROF_CFG_D | 18 | 59.38 |
-| ⚠️ | [`bucket_frame_prof_cfg_e`](cross/bucket_frame_prof_cfg_e.md) | bucket_frame | CFG_E | PROF | PROF_CFG_E | 64 | 37.5 |
-| ⚠️ | [`bucket_frame_prof_cfg_f`](cross/bucket_frame_prof_cfg_f.md) | bucket_frame | CFG_F | PROF | PROF_CFG_F | 1 | 34.38 |
-| ⚠️ | [`bucket_frame_prof_cfg_g`](cross/bucket_frame_prof_cfg_g.md) | bucket_frame | CFG_G | PROF | PROF_CFG_G | 16 | 37.5 |
-| ✅ | [`cross_good_error_good_cfg_a`](cross/cross_good_error_good_cfg_a.md) | cross | CFG_A | - | GOOD_ERROR_GOOD | 15 | 53.12 |
-| ✅ | [`cross_interleave_mix_cfg_a`](cross/cross_interleave_mix_cfg_a.md) | cross | CFG_A | - | INTERLEAVE_MIX | 8 | 50.0 |
-| ✅ | [`cross_super_long_counter_soak_cfg_a`](cross/cross_super_long_counter_soak_cfg_a.md) | cross | CFG_A | - | SUPER_LONG_COUNTER_SOAK | 12306 | 56.25 |
-
+| status | run_id | kind | build | bucket | seq | txns | cross_pct | ref |
+|:---:|---|---|---|---|---|---:|---:|---|
+| ❌ | [`all_buckets_frame_cfg_a`](cross/all_buckets_frame_cfg_a.md) | all_buckets_frame | CFG_A | - | ALL_CFG_A | 800 | 65.62 | [FRCV-2026-04-17-003](../BUG_HISTORY.md) |
+| ⚠️ | [`all_buckets_frame_cfg_b`](cross/all_buckets_frame_cfg_b.md) | all_buckets_frame | CFG_B | - | ALL_CFG_B | 76 | 40.62 | - |
+| ⚠️ | [`all_buckets_frame_cfg_c`](cross/all_buckets_frame_cfg_c.md) | all_buckets_frame | CFG_C | - | ALL_CFG_C | 36 | 40.62 | - |
+| ✅ | [`all_buckets_frame_cfg_d`](cross/all_buckets_frame_cfg_d.md) | all_buckets_frame | CFG_D | - | ALL_CFG_D | 27 | 59.38 | - |
+| ⚠️ | [`all_buckets_frame_cfg_e`](cross/all_buckets_frame_cfg_e.md) | all_buckets_frame | CFG_E | - | ALL_CFG_E | 66 | 40.62 | - |
+| ⚠️ | [`all_buckets_frame_cfg_f`](cross/all_buckets_frame_cfg_f.md) | all_buckets_frame | CFG_F | - | ALL_CFG_F | 3 | 37.5 | - |
+| ⚠️ | [`all_buckets_frame_cfg_g`](cross/all_buckets_frame_cfg_g.md) | all_buckets_frame | CFG_G | - | ALL_CFG_G | 17 | 37.5 | - |
+| ❌ | [`bucket_frame_basic_cfg_a`](cross/bucket_frame_basic_cfg_a.md) | bucket_frame | CFG_A | BASIC | BASIC_CFG_A | 87 | 59.38 | [FRCV-2026-04-17-003](../BUG_HISTORY.md) |
+| ⚠️ | [`bucket_frame_basic_cfg_b`](cross/bucket_frame_basic_cfg_b.md) | bucket_frame | CFG_B | BASIC | BASIC_CFG_B | 1 | 34.38 | - |
+| ❌ | [`bucket_frame_edge_cfg_a`](cross/bucket_frame_edge_cfg_a.md) | bucket_frame | CFG_A | EDGE | EDGE_CFG_A | 61 | 40.62 | [FRCV-2026-04-17-003](../BUG_HISTORY.md) |
+| ⚠️ | [`bucket_frame_edge_cfg_b`](cross/bucket_frame_edge_cfg_b.md) | bucket_frame | CFG_B | EDGE | EDGE_CFG_B | 5 | 37.5 | - |
+| ⚠️ | [`bucket_frame_edge_cfg_c`](cross/bucket_frame_edge_cfg_c.md) | bucket_frame | CFG_C | EDGE | EDGE_CFG_C | 3 | 37.5 | - |
+| ⚠️ | [`bucket_frame_edge_cfg_d`](cross/bucket_frame_edge_cfg_d.md) | bucket_frame | CFG_D | EDGE | EDGE_CFG_D | 1 | 34.38 | - |
+| ⚠️ | [`bucket_frame_edge_cfg_e`](cross/bucket_frame_edge_cfg_e.md) | bucket_frame | CFG_E | EDGE | EDGE_CFG_E | 1 | 34.38 | - |
+| ⚠️ | [`bucket_frame_edge_cfg_f`](cross/bucket_frame_edge_cfg_f.md) | bucket_frame | CFG_F | EDGE | EDGE_CFG_F | 1 | 34.38 | - |
+| ❌ | [`bucket_frame_error_cfg_a`](cross/bucket_frame_error_cfg_a.md) | bucket_frame | CFG_A | ERROR | ERROR_CFG_A | 101 | 62.5 | [FRCV-2026-04-17-003](../BUG_HISTORY.md) |
+| ⚠️ | [`bucket_frame_error_cfg_b`](cross/bucket_frame_error_cfg_b.md) | bucket_frame | CFG_B | ERROR | ERROR_CFG_B | 9 | 46.88 | - |
+| ⚠️ | [`bucket_frame_error_cfg_c`](cross/bucket_frame_error_cfg_c.md) | bucket_frame | CFG_C | ERROR | ERROR_CFG_C | 1 | 34.38 | - |
+| ⚠️ | [`bucket_frame_error_cfg_d`](cross/bucket_frame_error_cfg_d.md) | bucket_frame | CFG_D | ERROR | ERROR_CFG_D | 8 | 37.5 | - |
+| ⚠️ | [`bucket_frame_error_cfg_e`](cross/bucket_frame_error_cfg_e.md) | bucket_frame | CFG_E | ERROR | ERROR_CFG_E | 1 | 34.38 | - |
+| ⚠️ | [`bucket_frame_error_cfg_f`](cross/bucket_frame_error_cfg_f.md) | bucket_frame | CFG_F | ERROR | ERROR_CFG_F | 1 | 34.38 | - |
+| ⚠️ | [`bucket_frame_error_cfg_g`](cross/bucket_frame_error_cfg_g.md) | bucket_frame | CFG_G | ERROR | ERROR_CFG_G | 1 | 34.38 | - |
+| ✅ | [`bucket_frame_prof_cfg_a`](cross/bucket_frame_prof_cfg_a.md) | bucket_frame | CFG_A | PROF | PROF_CFG_A | 569 | 65.62 | - |
+| ⚠️ | [`bucket_frame_prof_cfg_b`](cross/bucket_frame_prof_cfg_b.md) | bucket_frame | CFG_B | PROF | PROF_CFG_B | 61 | 40.62 | - |
+| ⚠️ | [`bucket_frame_prof_cfg_c`](cross/bucket_frame_prof_cfg_c.md) | bucket_frame | CFG_C | PROF | PROF_CFG_C | 32 | 37.5 | - |
+| ✅ | [`bucket_frame_prof_cfg_d`](cross/bucket_frame_prof_cfg_d.md) | bucket_frame | CFG_D | PROF | PROF_CFG_D | 18 | 59.38 | - |
+| ⚠️ | [`bucket_frame_prof_cfg_e`](cross/bucket_frame_prof_cfg_e.md) | bucket_frame | CFG_E | PROF | PROF_CFG_E | 64 | 37.5 | - |
+| ⚠️ | [`bucket_frame_prof_cfg_f`](cross/bucket_frame_prof_cfg_f.md) | bucket_frame | CFG_F | PROF | PROF_CFG_F | 1 | 34.38 | - |
+| ⚠️ | [`bucket_frame_prof_cfg_g`](cross/bucket_frame_prof_cfg_g.md) | bucket_frame | CFG_G | PROF | PROF_CFG_G | 16 | 37.5 | - |
+| ✅ | [`cross_good_error_good_cfg_a`](cross/cross_good_error_good_cfg_a.md) | cross | CFG_A | - | GOOD_ERROR_GOOD | 15 | 53.12 | - |
+| ✅ | [`cross_interleave_mix_cfg_a`](cross/cross_interleave_mix_cfg_a.md) | cross | CFG_A | - | INTERLEAVE_MIX | 8 | 50.0 | - |
+| ✅ | [`cross_super_long_counter_soak_cfg_a`](cross/cross_super_long_counter_soak_cfg_a.md) | cross | CFG_A | - | SUPER_LONG_COUNTER_SOAK | 12306 | 56.25 | - |
 ## Random long-run cases
 
 <!-- each random case has a txn_growth page; pages are pending until checkpoint UCDBs exist. -->

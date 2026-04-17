@@ -849,5 +849,14 @@
 | 799 | `P051_status_poll_after_every_headerinfo` | `` | 65.62 | 0 | hit_eop |
 | 800 | `P052_control_write_soak_no_counter_side_effect` | `` | 65.62 | 0 | hit_eop |
 
+## Issue reference
+
+| status | field | value |
+|:---:|---|---|
+| ℹ️ | bug_ref | [FRCV-2026-04-17-003](../../BUG_HISTORY.md) |
+| ❌ | rerun_date | `2026-04-17` |
+| ❌ | rerun_verdict | Rerun reproduced unexpected_outputs=2 with counter_checks_failed=0, UVM_ERROR=0, and UVM_FATAL=0. |
+| ℹ️ | rerun_log | [uvm/logs/all_buckets_frame_cfg_a_after_s1.log](../../uvm/logs/all_buckets_frame_cfg_a_after_s1.log) |
+
 ---
 _Back to [dashboard](../../DV_REPORT.md)_
