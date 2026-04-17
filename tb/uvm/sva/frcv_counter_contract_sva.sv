@@ -30,8 +30,8 @@ module frcv_counter_contract_sva (
       exp_eop_pending <= 1'b0;
       exp_tail_count  <= '0;
     end else begin
-      exp_crc_pending <= 1'b1;
-      exp_crc_count   <= dbg_p_crc_err_count + {{31{1'b0}}, dbg_n_crc_error};
+      exp_crc_pending <= dbg_n_crc_error;
+      exp_crc_count   <= dbg_p_crc_err_count + 32'd1;
       exp_sop_pending <= hit_sop;
       exp_head_count  <= dbg_frame_counter_head + 32'd1;
       exp_eop_pending <= hit_eop;

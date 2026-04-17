@@ -33,22 +33,22 @@ This page is the coverage summary only. Per-case incremental coverage lives unde
 
 | status | run_id | kind | build | bucket | case_count | stmt | branch | toggle | functional_cross_pct | txns | ref |
 |:---:|---|---|---|---|---:|---|---|---|---:|---:|---|
-| ❌ | [`all_buckets_frame_cfg_a`](REPORT/cross/all_buckets_frame_cfg_a.md) | all_buckets_frame | CFG_A | - | 474 | 98.83 | 94.70 | 60.32 | 65.62 | 800 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
+| ✅ | [`all_buckets_frame_cfg_a`](REPORT/cross/all_buckets_frame_cfg_a.md) | all_buckets_frame | CFG_A | - | 474 | 98.83 | 94.70 | 60.32 | 68.75 | 738 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
 | ⚠️ | [`all_buckets_frame_cfg_b`](REPORT/cross/all_buckets_frame_cfg_b.md) | all_buckets_frame | CFG_B | - | 25 | 85.16 | 73.51 | 51.51 | 40.62 | 76 | - |
 | ⚠️ | [`all_buckets_frame_cfg_c`](REPORT/cross/all_buckets_frame_cfg_c.md) | all_buckets_frame | CFG_C | - | 6 | 80.16 | 66.23 | 50.58 | 40.62 | 36 | - |
 | ✅ | [`all_buckets_frame_cfg_d`](REPORT/cross/all_buckets_frame_cfg_d.md) | all_buckets_frame | CFG_D | - | 5 | 80.16 | 66.23 | 47.48 | 59.38 | 27 | - |
 | ⚠️ | [`all_buckets_frame_cfg_e`](REPORT/cross/all_buckets_frame_cfg_e.md) | all_buckets_frame | CFG_E | - | 5 | 80.93 | 67.55 | 51.25 | 40.62 | 66 | - |
 | ⚠️ | [`all_buckets_frame_cfg_f`](REPORT/cross/all_buckets_frame_cfg_f.md) | all_buckets_frame | CFG_F | - | 3 | 80.54 | 65.56 | 20.36 | 37.5 | 3 | - |
 | ⚠️ | [`all_buckets_frame_cfg_g`](REPORT/cross/all_buckets_frame_cfg_g.md) | all_buckets_frame | CFG_G | - | 2 | 80.16 | 64.24 | 44.79 | 37.5 | 17 | - |
-| ❌ | [`bucket_frame_basic_cfg_a`](REPORT/cross/bucket_frame_basic_cfg_a.md) | bucket_frame | CFG_A | BASIC | 129 | 98.83 | 94.70 | 51.72 | 59.38 | 87 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
+| ✅ | [`bucket_frame_basic_cfg_a`](REPORT/cross/bucket_frame_basic_cfg_a.md) | bucket_frame | CFG_A | BASIC | 129 | 98.83 | 94.70 | 51.72 | 59.38 | 84 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
 | ⚠️ | [`bucket_frame_basic_cfg_b`](REPORT/cross/bucket_frame_basic_cfg_b.md) | bucket_frame | CFG_B | BASIC | 1 | 77.34 | 62.25 | 16.79 | 34.38 | 1 | - |
-| ❌ | [`bucket_frame_edge_cfg_a`](REPORT/cross/bucket_frame_edge_cfg_a.md) | bucket_frame | CFG_A | EDGE | 119 | 91.83 | 82.12 | 53.39 | 40.62 | 61 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
+| ⚠️ | [`bucket_frame_edge_cfg_a`](REPORT/cross/bucket_frame_edge_cfg_a.md) | bucket_frame | CFG_A | EDGE | 119 | 91.83 | 82.12 | 53.39 | 40.62 | 24 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
 | ⚠️ | [`bucket_frame_edge_cfg_b`](REPORT/cross/bucket_frame_edge_cfg_b.md) | bucket_frame | CFG_B | EDGE | 5 | 80.86 | 65.56 | 22.73 | 37.5 | 5 | - |
 | ⚠️ | [`bucket_frame_edge_cfg_c`](REPORT/cross/bucket_frame_edge_cfg_c.md) | bucket_frame | CFG_C | EDGE | 3 | 80.16 | 66.23 | 46.21 | 37.5 | 3 | - |
 | ⚠️ | [`bucket_frame_edge_cfg_d`](REPORT/cross/bucket_frame_edge_cfg_d.md) | bucket_frame | CFG_D | EDGE | 1 | 79.77 | 63.58 | 16.32 | 34.38 | 1 | - |
 | ⚠️ | [`bucket_frame_edge_cfg_e`](REPORT/cross/bucket_frame_edge_cfg_e.md) | bucket_frame | CFG_E | EDGE | 1 | 79.77 | 63.58 | 16.54 | 34.38 | 1 | - |
 | ⚠️ | [`bucket_frame_edge_cfg_f`](REPORT/cross/bucket_frame_edge_cfg_f.md) | bucket_frame | CFG_F | EDGE | 1 | 80.16 | 64.90 | 17.41 | 34.38 | 1 | - |
-| ❌ | [`bucket_frame_error_cfg_a`](REPORT/cross/bucket_frame_error_cfg_a.md) | bucket_frame | CFG_A | ERROR | 116 | 96.11 | 90.07 | 59.44 | 62.5 | 101 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
+| ✅ | [`bucket_frame_error_cfg_a`](REPORT/cross/bucket_frame_error_cfg_a.md) | bucket_frame | CFG_A | ERROR | 116 | 96.11 | 90.07 | 59.44 | 78.12 | 76 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
 | ⚠️ | [`bucket_frame_error_cfg_b`](REPORT/cross/bucket_frame_error_cfg_b.md) | bucket_frame | CFG_B | ERROR | 9 | 85.16 | 71.52 | 33.32 | 46.88 | 9 | - |
 | ⚠️ | [`bucket_frame_error_cfg_c`](REPORT/cross/bucket_frame_error_cfg_c.md) | bucket_frame | CFG_C | ERROR | 1 | 79.77 | 63.58 | 16.16 | 34.38 | 1 | - |
 | ⚠️ | [`bucket_frame_error_cfg_d`](REPORT/cross/bucket_frame_error_cfg_d.md) | bucket_frame | CFG_D | ERROR | 1 | 80.16 | 64.24 | 39.80 | 37.5 | 8 | - |

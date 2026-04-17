@@ -707,6 +707,55 @@ package frcv_env_pkg;
       super.new(name, parent);
     endfunction
 
+    function automatic string obs_kind_name(frcv_obs_kind_e kind);
+      case (kind)
+        FRCV_OBS_HEADER: return "header";
+        FRCV_OBS_HIT: return "hit";
+        FRCV_OBS_ENDOFRUN: return "endofrun";
+        default: return "unknown";
+      endcase
+    endfunction
+
+    function automatic string txn_summary(frcv_expected_txn txn);
+      if (txn == null)
+        return "null";
+      return $sformatf(
+        "case=%s seq=%s order=%0d exp(h=%0d hdr=%0d eop=%0d) obs(h=%0d hdr=%0d eop=%0d) stop=%s short=%0d strict=%0d",
+        txn.case_id,
+        txn.sequence_name,
+        txn.order_idx,
+        txn.expected_hits,
+        txn.expected_headers,
+        txn.expected_real_eops,
+        txn.observed_hits,
+        txn.observed_headers,
+        txn.observed_real_eops,
+        txn.stop_boundary,
+        txn.short_mode,
+        txn.strict_checks
+      );
+    endfunction
+
+    function automatic void report_unexpected_output(frcv_obs_item item);
+      string front_summary;
+
+      front_summary = (expected_q.size() > 0) ? txn_summary(expected_q[0]) : "empty";
+      `uvm_warning(
+        "FRCV_SCB_UNEXPECTED",
+        $sformatf(
+          "unexpected_%s time=%0t case=%s mode=%s unexpected_count=%0d active=%s queue_depth=%0d queue_front=%s",
+          obs_kind_name(item.kind),
+          item.time_ps,
+          current_case_id,
+          current_execution_mode,
+          unexpected_output_count + 1,
+          txn_summary(active_txn),
+          expected_q.size(),
+          front_summary
+        )
+      )
+    endfunction
+
     function void build_phase(uvm_phase phase);
       super.build_phase(phase);
       obs_imp                = new("obs_imp", this);
@@ -754,6 +803,7 @@ package frcv_env_pkg;
             if (active_txn.expected_hits == 0 && active_txn.expected_real_eops == 0)
               finalize_active_txn("header_only_or_zero_hit");
           end else begin
+            report_unexpected_output(item);
             unexpected_output_count++;
           end
         end
@@ -776,6 +826,7 @@ package frcv_env_pkg;
               active_txn.first_obs_time_ps = item.time_ps;
             active_txn.last_obs_time_ps = item.time_ps;
           end else begin
+            report_unexpected_output(item);
             unexpected_output_count++;
           end
           if (item.hit_eop) begin
@@ -823,9 +874,34 @@ package frcv_env_pkg;
     endtask
 
     task automatic note_case_end(string case_id);
+      if (active_txn != null || expected_q.size() != 0)
+        `uvm_warning(
+          "FRCV_SCB_CASE_END",
+          $sformatf(
+            "case_end_with_pending_state case=%s mode=%s active=%s queue_depth=%0d queue_front=%s",
+            case_id,
+            current_execution_mode,
+            txn_summary(active_txn),
+            expected_q.size(),
+            (expected_q.size() > 0) ? txn_summary(expected_q[0]) : "empty"
+          )
+        )
       $display("FRCV_CASE_END case=%s mode=%s completed_txns=%0d", case_id, current_execution_mode, completed_txn_count);
       current_case_id = "";
       current_random_case = 1'b0;
+    endtask
+
+    task automatic force_complete_case_txn(string case_id, string reason);
+      if (active_txn == null && expected_q.size() > 0 && expected_q[0].case_id == case_id)
+        active_txn = expected_q.pop_front();
+
+      if (active_txn != null && active_txn.case_id == case_id)
+        finalize_active_txn(reason);
+    endtask
+
+    task automatic discard_pending_case_txns(string case_id);
+      while (expected_q.size() > 0 && expected_q[0].case_id == case_id)
+        void'(expected_q.pop_front());
     endtask
 
     task automatic snapshot_counters(
@@ -1319,6 +1395,14 @@ package frcv_env_pkg;
 
     task automatic scb_case_end(string case_id);
       m_env.m_scb.note_case_end(case_id);
+    endtask
+
+    task automatic scb_force_complete_case_txn(string case_id, string reason);
+      m_env.m_scb.force_complete_case_txn(case_id, reason);
+    endtask
+
+    task automatic scb_discard_pending_case_txns(string case_id);
+      m_env.m_scb.discard_pending_case_txns(case_id);
     endtask
 
     task automatic scb_expect_txn(

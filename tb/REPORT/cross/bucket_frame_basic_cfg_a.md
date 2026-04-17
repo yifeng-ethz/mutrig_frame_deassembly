@@ -1,4 +1,4 @@
-# ❌ bucket_frame_basic_cfg_a
+# ✅ bucket_frame_basic_cfg_a
 
 **Kind:** `bucket_frame` &nbsp; **Build:** `CFG_A` &nbsp; **Bucket:** `BASIC` &nbsp; **Sequence:** `BASIC_CFG_A`
 
@@ -21,11 +21,11 @@
 | ℹ️ | effort | `practical` |
 | ℹ️ | iter_cap | `None` |
 | ℹ️ | payload_cap | `None` |
-| ℹ️ | txns | `87` |
-| ❌ | functional_cross_pct | `59.38` |
+| ℹ️ | txns | `84` |
+| ✅ | functional_cross_pct | `59.38` |
 | ℹ️ | queued_overlap | `0` |
 | ✅ | counter_checks_failed | `0` |
-| ❌ | unexpected_outputs | `2` |
+| ✅ | unexpected_outputs | `0` |
 
 ## Code coverage
 
@@ -64,85 +64,20 @@
 | 14 | `B016_ctrl_decode_sync_disable` | `` | 40.62 | 0 | hit_eop |
 | 15 | `B017_ctrl_decode_running_go` | `` | 40.62 | 0 | hit_eop |
 | 16 | `B018_ctrl_decode_terminating_stop_new_headers` | `` | 40.62 | 0 | hit_eop |
-| 17 | `B019_ctrl_decode_link_test_disable` | `` | 40.62 | 0 | hit_eop |
-| 18 | `B020_ctrl_decode_sync_test_disable` | `` | 40.62 | 0 | hit_eop |
-| 19 | `B022_ctrl_decode_out_of_daq_disable` | `` | 40.62 | 0 | hit_eop |
-| 20 | `B023_csr_control_default_enable` | `` | 40.62 | 0 | hit_eop |
-| 21 | `B024_csr_control_write_zero_masks_running` | `` | 40.62 | 0 | hit_eop |
-| 22 | `B025_csr_control_write_one_unmasks_running` | `` | 40.62 | 0 | hit_eop |
-| 23 | `B026_csr_read_addr0_control_status` | `` | 40.62 | 0 | hit_eop |
-| 24 | `B027_csr_read_addr1_crc_counter` | `` | 40.62 | 0 | hit_eop |
-| 25 | `B028_csr_read_addr2_frame_counter` | `` | 40.62 | 0 | hit_eop |
-| 26 | `B029_csr_read_unused_word_zero` | `` | 40.62 | 0 | hit_eop |
-| 27 | `B030_csr_write_unused_word_no_side_effect` | `` | 40.62 | 0 | hit_eop |
-| 28 | `B031_csr_waitrequest_low_on_read` | `` | 40.62 | 0 | hit_eop |
-| 29 | `B032_csr_waitrequest_low_on_write` | `` | 40.62 | 0 | hit_eop |
-| 30 | `B033_csr_waitrequest_high_when_idle` | `` | 40.62 | 0 | hit_eop |
-| 31 | `B034_csr_reserved_control_bits_roundtrip` | `` | 40.62 | 0 | hit_eop |
 | 32 | `B035_fs_idle_requires_k28_0_and_kchar` | `` | 40.62 | 0 | hit_eop |
-| 33 | `B038_header_byte_with_enable_high_starts_frame` | `` | 40.62 | 0 | hit_eop |
 | 34 | `B039_long_zero_hit_frame_headerinfo_pulse` | `` | 43.75 | 1 | header_only_or_zero_hit |
-| 35 | `B040_long_zero_hit_frame_no_hit_valid` | `` | 43.75 | 0 | hit_eop |
-| 36 | `B041_long_one_hit_sop_and_eop_same_transfer` | `` | 43.75 | 0 | hit_eop |
 | 37 | `B042_long_two_hit_sop_first_only` | `` | 46.88 | 1 | hit_eop |
-| 38 | `B043_long_two_hit_eop_last_only` | `` | 46.88 | 0 | hit_eop |
-| 39 | `B044_long_frame_number_lsb_capture` | `` | 46.88 | 0 | hit_eop |
-| 40 | `B045_long_frame_number_msb_capture` | `` | 46.88 | 0 | hit_eop |
-| 41 | `B046_long_frame_flags_capture` | `` | 46.88 | 0 | hit_eop |
-| 42 | `B047_long_frame_len_capture` | `` | 46.88 | 0 | hit_eop |
-| 43 | `B048_long_hit_channel_unpack` | `` | 46.88 | 0 | hit_eop |
-| 44 | `B049_long_hit_tcc_unpack` | `` | 46.88 | 0 | hit_eop |
-| 45 | `B050_long_hit_tfine_unpack` | `` | 46.88 | 0 | hit_eop |
-| 46 | `B051_long_hit_ecc_unpack` | `` | 46.88 | 0 | hit_eop |
-| 47 | `B052_long_hit_eflag_unpack` | `` | 46.88 | 0 | hit_eop |
-| 48 | `B053_long_t_badhit_raises_error0` | `` | 46.88 | 0 | hit_eop |
-| 49 | `B054_long_e_badhit_raises_error0` | `` | 46.88 | 0 | hit_eop |
-| 50 | `B055_long_parity_error_raises_error0` | `` | 46.88 | 0 | hit_eop |
-| 51 | `B056_long_decode_error_raises_error0` | `` | 46.88 | 0 | hit_eop |
-| 52 | `B057_long_loss_sync_propagates_error2` | `` | 46.88 | 0 | hit_eop |
-| 53 | `B058_long_crc_good_keeps_error1_low` | `` | 46.88 | 0 | hit_eop |
-| 54 | `B059_long_crc_bad_raises_error1_on_eop` | `` | 46.88 | 0 | hit_eop |
-| 55 | `B060_long_crc_bad_increments_crc_counter` | `` | 46.88 | 0 | hit_eop |
-| 56 | `B061_sop_increments_frame_counter_head` | `` | 46.88 | 0 | hit_eop |
-| 57 | `B062_eop_increments_frame_counter_tail` | `` | 46.88 | 0 | hit_eop |
-| 58 | `B063_frame_counter_register_is_head_minus_tail` | `` | 46.88 | 0 | hit_eop |
 | 59 | `B065_short_zero_hit_frame_headerinfo_pulse` | `` | 56.25 | 3 | header_only_or_zero_hit |
-| 60 | `B066_short_one_hit_sop_eop_same_transfer` | `` | 56.25 | 0 | hit_eop |
-| 61 | `B067_short_two_hit_even_pairing` | `` | 56.25 | 0 | hit_eop |
 | 62 | `B068_short_three_hit_odd_pairing` | `` | 59.38 | 1 | hit_eop |
-| 63 | `B069_short_four_hit_even_followup` | `` | 59.38 | 0 | hit_eop |
 | 64 | `B070_short_mode_selected_by_flags_100` | `` | 59.38 | 0 | hit_eop |
-| 65 | `B071_short_path_zeroes_ecc_field` | `` | 59.38 | 0 | hit_eop |
-| 66 | `B072_short_path_uses_bit0_as_eflag` | `` | 59.38 | 0 | hit_eop |
-| 67 | `B073_short_hit_channel_unpack` | `` | 59.38 | 0 | hit_eop |
-| 68 | `B074_short_hit_tcc_unpack` | `` | 59.38 | 0 | hit_eop |
-| 69 | `B075_short_hit_tfine_unpack` | `` | 59.38 | 0 | hit_eop |
-| 70 | `B076_short_parity_error_raises_error0` | `` | 59.38 | 0 | hit_eop |
-| 71 | `B077_short_decode_error_raises_error0` | `` | 59.38 | 0 | hit_eop |
-| 72 | `B078_short_loss_sync_propagates_error2` | `` | 59.38 | 0 | hit_eop |
-| 73 | `B079_short_crc_bad_raises_error1_on_last_hit` | `` | 59.38 | 0 | hit_eop |
-| 74 | `B080_short_crc_counter_accumulates` | `` | 59.38 | 0 | hit_eop |
-| 75 | `B081_short_frame_counter_updates` | `` | 59.38 | 0 | hit_eop |
-| 76 | `B082_headerinfo_one_pulse_per_frame` | `` | 59.38 | 0 | hit_eop |
-| 77 | `B083_headerinfo_channel_matches_input` | `` | 59.38 | 0 | hit_eop |
-| 78 | `B084_headerinfo_frame_number_field_map` | `` | 59.38 | 0 | hit_eop |
-| 79 | `B085_headerinfo_word_count_field_map` | `` | 59.38 | 0 | hit_eop |
-| 80 | `B086_headerinfo_frame_len_field_map` | `` | 59.38 | 0 | hit_eop |
-| 81 | `B087_headerinfo_flags_field_map` | `` | 59.38 | 0 | hit_eop |
-| 82 | `B088_output_channel_matches_input_channel` | `` | 59.38 | 0 | hit_eop |
-| 83 | `B089_hit_valid_only_on_complete_word` | `` | 59.38 | 0 | hit_eop |
-| 84 | `B090_no_hit_valid_in_crc_states` | `` | 59.38 | 0 | hit_eop |
-| 85 | `B091_no_sop_without_valid` | `` | 59.38 | 0 | hit_eop |
-| 86 | `B092_no_eop_without_valid` | `` | 59.38 | 0 | hit_eop |
-| 87 | `B096_running_mask_toggle_between_frames` | `` | 59.38 | 0 | hit_eop |
 
 ## Issue reference
 
 | status | field | value |
 |:---:|---|---|
 | ℹ️ | bug_ref | [FRCV-2026-04-17-003](../../BUG_HISTORY.md) |
-| ❌ | rerun_date | `2026-04-17` |
-| ❌ | rerun_verdict | Rerun reproduced unexpected_outputs=2 with counter_checks_failed=0, UVM_ERROR=0, and UVM_FATAL=0. |
+| ✅ | rerun_date | `2026-04-18` |
+| ✅ | rerun_verdict | Before fix on 2026-04-17 this run reproduced unexpected_outputs=2 with counter_checks_failed=0, UVM_ERROR=0, and UVM_FATAL=0. After fix on 2026-04-18 the rerun is clean: unexpected_outputs=0, counter_checks_failed=0, UVM_ERROR=0, and UVM_FATAL=0. |
 | ℹ️ | rerun_log | [uvm/logs/bucket_frame_basic_cfg_a_after_s1.log](../../uvm/logs/bucket_frame_basic_cfg_a_after_s1.log) |
 
 ---

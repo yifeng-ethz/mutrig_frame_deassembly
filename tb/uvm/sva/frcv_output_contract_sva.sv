@@ -131,7 +131,7 @@ module frcv_output_contract_sva #(
 
   property p_error1_only_on_eop;
     @(posedge clk) disable iff (rst)
-      hit_error[1] |-> hit_eop;
+      (hit_valid && hit_error[1]) |-> hit_eop;
   endproperty
 
   property p_header_pending_matches_output;

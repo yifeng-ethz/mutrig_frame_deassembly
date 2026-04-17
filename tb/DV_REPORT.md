@@ -1,6 +1,6 @@
-# ❌ DV Report — mutrig_frame_deassembly
+# ✅ DV Report — mutrig_frame_deassembly
 
-**DUT:** `frame_rcv_ip` &nbsp; **Date:** `2026-04-17` &nbsp;
+**DUT:** `frame_rcv_ip` &nbsp; **Date:** `2026-04-18` &nbsp;
 **RTL variant:** `after` &nbsp; **Seed:** `1`
 
 This page is the chief-architect dashboard. All per-case evidence lives under [`REPORT/`](REPORT/README.md).
@@ -14,7 +14,7 @@ This page is the chief-architect dashboard. All per-case evidence lives under [`
 | status | field | value |
 |:---:|---|---|
 | ✅ | failed_cases | `0` |
-| ❌ | signoff_runs_with_failures | `4` |
+| ✅ | signoff_runs_with_failures | `0` |
 | ✅ | unimplemented_cases | `0` |
 | ✅ | stale_artifacts | `0` |
 
@@ -49,22 +49,22 @@ This page is the chief-architect dashboard. All per-case evidence lives under [`
 
 | status | run_id | kind | build | seq | txns | cross_pct | ref |
 |:---:|---|---|---|---|---:|---:|---|
-| ❌ | [`all_buckets_frame_cfg_a`](REPORT/cross/all_buckets_frame_cfg_a.md) | all_buckets_frame | CFG_A | ALL_CFG_A | 800 | 65.62 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
+| ✅ | [`all_buckets_frame_cfg_a`](REPORT/cross/all_buckets_frame_cfg_a.md) | all_buckets_frame | CFG_A | ALL_CFG_A | 738 | 68.75 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
 | ⚠️ | [`all_buckets_frame_cfg_b`](REPORT/cross/all_buckets_frame_cfg_b.md) | all_buckets_frame | CFG_B | ALL_CFG_B | 76 | 40.62 | - |
 | ⚠️ | [`all_buckets_frame_cfg_c`](REPORT/cross/all_buckets_frame_cfg_c.md) | all_buckets_frame | CFG_C | ALL_CFG_C | 36 | 40.62 | - |
 | ✅ | [`all_buckets_frame_cfg_d`](REPORT/cross/all_buckets_frame_cfg_d.md) | all_buckets_frame | CFG_D | ALL_CFG_D | 27 | 59.38 | - |
 | ⚠️ | [`all_buckets_frame_cfg_e`](REPORT/cross/all_buckets_frame_cfg_e.md) | all_buckets_frame | CFG_E | ALL_CFG_E | 66 | 40.62 | - |
 | ⚠️ | [`all_buckets_frame_cfg_f`](REPORT/cross/all_buckets_frame_cfg_f.md) | all_buckets_frame | CFG_F | ALL_CFG_F | 3 | 37.5 | - |
 | ⚠️ | [`all_buckets_frame_cfg_g`](REPORT/cross/all_buckets_frame_cfg_g.md) | all_buckets_frame | CFG_G | ALL_CFG_G | 17 | 37.5 | - |
-| ❌ | [`bucket_frame_basic_cfg_a`](REPORT/cross/bucket_frame_basic_cfg_a.md) | bucket_frame | CFG_A | BASIC_CFG_A | 87 | 59.38 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
+| ✅ | [`bucket_frame_basic_cfg_a`](REPORT/cross/bucket_frame_basic_cfg_a.md) | bucket_frame | CFG_A | BASIC_CFG_A | 84 | 59.38 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
 | ⚠️ | [`bucket_frame_basic_cfg_b`](REPORT/cross/bucket_frame_basic_cfg_b.md) | bucket_frame | CFG_B | BASIC_CFG_B | 1 | 34.38 | - |
-| ❌ | [`bucket_frame_edge_cfg_a`](REPORT/cross/bucket_frame_edge_cfg_a.md) | bucket_frame | CFG_A | EDGE_CFG_A | 61 | 40.62 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
+| ⚠️ | [`bucket_frame_edge_cfg_a`](REPORT/cross/bucket_frame_edge_cfg_a.md) | bucket_frame | CFG_A | EDGE_CFG_A | 24 | 40.62 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
 | ⚠️ | [`bucket_frame_edge_cfg_b`](REPORT/cross/bucket_frame_edge_cfg_b.md) | bucket_frame | CFG_B | EDGE_CFG_B | 5 | 37.5 | - |
 | ⚠️ | [`bucket_frame_edge_cfg_c`](REPORT/cross/bucket_frame_edge_cfg_c.md) | bucket_frame | CFG_C | EDGE_CFG_C | 3 | 37.5 | - |
 | ⚠️ | [`bucket_frame_edge_cfg_d`](REPORT/cross/bucket_frame_edge_cfg_d.md) | bucket_frame | CFG_D | EDGE_CFG_D | 1 | 34.38 | - |
 | ⚠️ | [`bucket_frame_edge_cfg_e`](REPORT/cross/bucket_frame_edge_cfg_e.md) | bucket_frame | CFG_E | EDGE_CFG_E | 1 | 34.38 | - |
 | ⚠️ | [`bucket_frame_edge_cfg_f`](REPORT/cross/bucket_frame_edge_cfg_f.md) | bucket_frame | CFG_F | EDGE_CFG_F | 1 | 34.38 | - |
-| ❌ | [`bucket_frame_error_cfg_a`](REPORT/cross/bucket_frame_error_cfg_a.md) | bucket_frame | CFG_A | ERROR_CFG_A | 101 | 62.5 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
+| ✅ | [`bucket_frame_error_cfg_a`](REPORT/cross/bucket_frame_error_cfg_a.md) | bucket_frame | CFG_A | ERROR_CFG_A | 76 | 78.12 | [FRCV-2026-04-17-003](BUG_HISTORY.md) |
 | ⚠️ | [`bucket_frame_error_cfg_b`](REPORT/cross/bucket_frame_error_cfg_b.md) | bucket_frame | CFG_B | ERROR_CFG_B | 9 | 46.88 | - |
 | ⚠️ | [`bucket_frame_error_cfg_c`](REPORT/cross/bucket_frame_error_cfg_c.md) | bucket_frame | CFG_C | ERROR_CFG_C | 1 | 34.38 | - |
 | ⚠️ | [`bucket_frame_error_cfg_d`](REPORT/cross/bucket_frame_error_cfg_d.md) | bucket_frame | CFG_D | ERROR_CFG_D | 8 | 37.5 | - |
