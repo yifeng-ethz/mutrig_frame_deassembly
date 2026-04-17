@@ -106,6 +106,7 @@ The DV plan therefore has two obligations:
 |---|---|---|
 | [DV_PLAN.md](DV_PLAN.md) | Scope, contract, targets | n/a |
 | [DV_HARNESS.md](DV_HARNESS.md) | UVM architecture and SVA plan | n/a |
+| [DV_FORMAL.md](DV_FORMAL.md) | Packet-shape formal-readiness and proof targets | n/a |
 | [DV_BASIC.md](DV_BASIC.md) | `B001..B130` | 130 |
 | [DV_EDGE.md](DV_EDGE.md) | `E001..E130` | 130 |
 | [DV_PROF.md](DV_PROF.md) | `P001..P130` | 130 |
@@ -125,6 +126,7 @@ Required structure:
 - monitors for `hit_type0` and `headerinfo`
 - parser-based scoreboard that reconstructs frame expectations from the actual byte stream
 - SVA for AVMM timing, control one-hot assumptions, parser-state invariants, and termination behavior
+- mixed-language formal shell and packet-shape proof plan in [DV_FORMAL.md](DV_FORMAL.md)
 
 ## 6. Execution Modes
 

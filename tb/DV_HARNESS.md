@@ -26,6 +26,7 @@ tb/
   DV_PROF.md
   DV_ERROR.md
   DV_CROSS.md
+  DV_FORMAL.md
   uvm/
     Makefile
     tb_top.sv
@@ -47,6 +48,13 @@ tb/
       frcv_ctrl_sva.sv
       frcv_rx8b1k_sva.sv
       frcv_internal_sva.sv
+      frcv_parser_boundary_sva.sv
+      frcv_output_contract_sva.sv
+      frcv_counter_contract_sva.sv
+  formal/
+    Makefile
+    frcv_formal_pkt_assumptions.sv
+    frcv_formal_top.sv
 ```
 
 ## 3. Top-Level Connections
@@ -73,6 +81,8 @@ These debug signals are required because several contracts are not visible from 
 - one-cycle control decode latency
 - `TERMINATING` blocking only fresh headers from `FS_IDLE`
 - `MODE_HALT` internal abort-vs-hold behavior
+- packet-shape contract points between `proc_frame_rcv_comb` and the registered
+  `hit_type0` / `headerinfo` outputs
 
 ## 4. Agents And Monitors
 
@@ -258,6 +268,35 @@ Checks:
 - `eop` only when `valid`
 - zero-length frames never emit `hit_type0_valid`
 - `headerinfo_valid` is a one-cycle pulse
+
+### 7.5 Packet-shape boundary SVA
+
+Active current-tree files:
+
+- `frcv_parser_boundary_sva.sv`
+  - `n_new_frame` only on enabled `K28.0`
+  - `n_new_word` only on payload bytes
+  - CRC error pulse does not overlap parser word/frame creation
+- `frcv_output_contract_sva.sv`
+  - sampled parser word maps exactly onto `hit_type0`
+  - sampled frame header maps exactly onto `headerinfo`
+- `frcv_counter_contract_sva.sv`
+  - `n_crc_error` increments the CRC counter exactly once
+  - `sop/eop` markers advance head/tail counters
+
+### 7.6 Formal-ready mixed-language shell
+
+The active formal path keeps the VHDL DUT intact and adds:
+
+- `rtl/sv_ver/frame_rcv_ip/frame_rcv_ip_dut_sv.sv`
+  - thin SV shell around `frame_rcv_ip`
+  - exports next-state signals required by packet-shape SVA
+- `tb/formal/frcv_formal_pkt_assumptions.sv`
+  - constrains the legal ingress byte grammar
+- `tb/formal/frcv_formal_top.sv`
+  - binds the wrapper plus the active SVA into one formal-facing harness
+
+The proof plan and per-boundary backlog live in [DV_FORMAL.md](DV_FORMAL.md).
 - no duplicate `eop` for a single frame
 - no fresh header start after the `TERMINATING` edge once the parser is back in `FS_IDLE`
 

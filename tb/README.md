@@ -6,6 +6,7 @@
 - coverage summary: [`DV_COV.md`](DV_COV.md)
 - evidence tree: [`REPORT/README.md`](REPORT/README.md)
 - bug ledger: [`BUG_HISTORY.md`](BUG_HISTORY.md)
+- formal plan: [`DV_FORMAL.md`](DV_FORMAL.md)
 
 ## Common Commands
 
@@ -14,6 +15,7 @@ make -C tb/uvm run_case CASE_ID=B041
 python3 tb/scripts/run_isolated_cases.py --skip-existing
 python3 tb/scripts/run_full_random_parallel.py --parallel 4 --duration-min 20
 python3 tb/scripts/generate_dv_report.py
+make -C tb/formal compile
 ```
 
 ## Notes

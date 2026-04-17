@@ -43,6 +43,8 @@ VCOM_COV    ?= -cover bcesft
 VLOG_COV    ?= +cover=bcesft
 
 RTL_DIR = $(IP_SRC)/rtl
+SV_DUT_DIR = $(RTL_DIR)/sv_ver/frame_rcv_ip
+SVA_DIR = $(UVM_DIR)/sva
 RTL_HEAD_PATH ?= rtl/frame_rcv_ip.vhd
 RTL_SRC = $(if $(filter before,$(RTL_VARIANT)),$(BUILD_DIR)/frame_rcv_ip.vhd,$(RTL_DIR)/frame_rcv_ip.vhd)
 RUN_ID  = $(if $(RUN_ID_OVERRIDE),$(RUN_ID_OVERRIDE),$(if $(CASE_ID),$(CASE_ID),$(TEST)))
@@ -54,6 +56,10 @@ UVM_SRCS = \
 	$(UVM_DIR)/frcv_if.sv \
 	$(UVM_DIR)/frcv_cases.svh \
 	$(UVM_DIR)/frcv_env_pkg.sv \
+	$(SV_DUT_DIR)/frame_rcv_ip_dut_sv.sv \
+	$(SVA_DIR)/frcv_parser_boundary_sva.sv \
+	$(SVA_DIR)/frcv_output_contract_sva.sv \
+	$(SVA_DIR)/frcv_counter_contract_sva.sv \
 	$(UVM_DIR)/tb_top.sv
 
 .PHONY: license_check compile run run_sim run_case run_case_list run_cross run_isolated run_bucket_frame run_all_buckets_frame cov_report_case cov_merge cov_report_total run_before_expected_fail run_after prove_delta clean
@@ -86,6 +92,10 @@ $(WORK_DIR)/.compiled: $(RTL_DIR)/crc16_calc.vhd $(RTL_DIR)/frame_rcv_ip.vhd $(U
 	  $(VLOG_COV) +incdir+$(UVM_SRC) +incdir+$(UVM_DIR) -sv \
 	  $(UVM_SRC)/uvm_pkg.sv \
 	  $(UVM_DIR)/frcv_env_pkg.sv \
+	  $(SV_DUT_DIR)/frame_rcv_ip_dut_sv.sv \
+	  $(SVA_DIR)/frcv_parser_boundary_sva.sv \
+	  $(SVA_DIR)/frcv_output_contract_sva.sv \
+	  $(SVA_DIR)/frcv_counter_contract_sva.sv \
 	  $(UVM_DIR)/tb_top.sv
 	@touch $@
 

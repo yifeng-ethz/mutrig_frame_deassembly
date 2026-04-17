@@ -45,6 +45,23 @@ module tb_top;
   logic [31:0]                  dbg_frame_counter;
   logic [31:0]                  dbg_frame_counter_head;
   logic [31:0]                  dbg_frame_counter_tail;
+  logic                         dbg_n_new_frame;
+  logic                         dbg_n_new_word;
+  logic                         dbg_p_new_word;
+  logic [47:0]                  dbg_n_word;
+  logic [47:0]                  dbg_s_o_word;
+  logic [9:0]                   dbg_n_word_cnt;
+  logic [9:0]                   dbg_p_word_cnt;
+  logic [9:0]                   dbg_n_frame_len;
+  logic [9:0]                   dbg_p_frame_len;
+  logic [15:0]                  dbg_n_frame_number;
+  logic [5:0]                   dbg_n_frame_flags;
+  logic [5:0]                   dbg_p_frame_flags;
+  logic                         dbg_n_frame_info_ready;
+  logic                         dbg_n_frame_info_ready_d1;
+  logic                         dbg_headerinfo_valid_comb;
+  logic                         dbg_n_crc_error;
+  logic [31:0]                  dbg_p_crc_err_count;
 
   always #(CLK_PERIOD_PS/2) clk = ~clk;
 
@@ -76,7 +93,7 @@ module tb_top;
   assign dbg_if.frame_counter_head = dbg_frame_counter_head;
   assign dbg_if.frame_counter_tail = dbg_frame_counter_tail;
 
-  frame_rcv_ip #(
+  frame_rcv_ip_dut_sv #(
     .CHANNEL_WIDTH (TB_CHANNEL_WIDTH),
     .CSR_ADDR_WIDTH(TB_CSR_ADDR_WIDTH),
     .MODE_HALT     (TB_MODE_HALT),
@@ -106,17 +123,33 @@ module tb_top;
     .asi_ctrl_valid              (ctrl_if.valid),
     .asi_ctrl_ready              (ctrl_if.ready),
     .i_rst                       (rst),
-    .i_clk                       (clk)
+    .i_clk                       (clk),
+    .dbg_enable                  (dbg_enable),
+    .dbg_receiver_go             (dbg_receiver_go),
+    .dbg_receiver_force_go       (dbg_receiver_force_go),
+    .dbg_terminating_pending     (dbg_terminating_pending),
+    .dbg_crc_err_counter         (dbg_crc_err_counter),
+    .dbg_frame_counter           (dbg_frame_counter),
+    .dbg_frame_counter_head      (dbg_frame_counter_head),
+    .dbg_frame_counter_tail      (dbg_frame_counter_tail),
+    .dbg_n_new_frame             (dbg_n_new_frame),
+    .dbg_n_new_word              (dbg_n_new_word),
+    .dbg_p_new_word              (dbg_p_new_word),
+    .dbg_n_word                  (dbg_n_word),
+    .dbg_s_o_word                (dbg_s_o_word),
+    .dbg_n_word_cnt              (dbg_n_word_cnt),
+    .dbg_p_word_cnt              (dbg_p_word_cnt),
+    .dbg_n_frame_len             (dbg_n_frame_len),
+    .dbg_p_frame_len             (dbg_p_frame_len),
+    .dbg_n_frame_number          (dbg_n_frame_number),
+    .dbg_n_frame_flags           (dbg_n_frame_flags),
+    .dbg_p_frame_flags           (dbg_p_frame_flags),
+    .dbg_n_frame_info_ready      (dbg_n_frame_info_ready),
+    .dbg_n_frame_info_ready_d1   (dbg_n_frame_info_ready_d1),
+    .dbg_headerinfo_valid_comb   (dbg_headerinfo_valid_comb),
+    .dbg_n_crc_error             (dbg_n_crc_error),
+    .dbg_p_crc_err_count         (dbg_p_crc_err_count)
   );
-
-  assign dbg_enable             = dut.enable;
-  assign dbg_receiver_go        = dut.receiver_go;
-  assign dbg_receiver_force_go  = dut.receiver_force_go;
-  assign dbg_terminating_pending = dut.terminating_pending;
-  assign dbg_crc_err_counter    = dut.csr.crc_err_counter;
-  assign dbg_frame_counter      = dut.csr.frame_counter;
-  assign dbg_frame_counter_head = dut.csr.frame_counter_head;
-  assign dbg_frame_counter_tail = dut.csr.frame_counter_tail;
 
   property p_hit_sop_requires_valid;
     @(posedge clk) disable iff (rst)
@@ -133,6 +166,57 @@ module tb_top;
 
   assert property (p_headerinfo_not_unknown)
     else $error("headerinfo_data contains X/Z while valid");
+
+  frcv_parser_boundary_sva u_parser_contract (
+    .clk            (clk),
+    .rst            (rst),
+    .rx_data        (rx_if.data),
+    .rx_valid       (rx_if.valid),
+    .dbg_enable     (dbg_enable),
+    .dbg_n_new_frame(dbg_n_new_frame),
+    .dbg_n_new_word (dbg_n_new_word),
+    .dbg_n_crc_error(dbg_n_crc_error)
+  );
+
+  frcv_output_contract_sva #(
+    .CHANNEL_WIDTH(TB_CHANNEL_WIDTH)
+  ) u_output_contract (
+    .clk                 (clk),
+    .rst                 (rst),
+    .rx_channel          (dut_rx_channel),
+    .hit_channel         (dut_hit_channel),
+    .hit_data            (out_if.hit_data),
+    .hit_valid           (out_if.hit_valid),
+    .hit_sop             (out_if.hit_sop),
+    .hit_eop             (out_if.hit_eop),
+    .hit_error           (out_if.hit_error),
+    .headerinfo_data     (out_if.headerinfo_data),
+    .headerinfo_valid    (out_if.headerinfo_valid),
+    .headerinfo_channel  (dut_headerinfo_channel),
+    .dbg_p_new_word      (dbg_p_new_word),
+    .dbg_s_o_word        (dbg_s_o_word),
+    .dbg_p_word_cnt      (dbg_p_word_cnt),
+    .dbg_p_frame_len     (dbg_p_frame_len),
+    .dbg_p_frame_flags   (dbg_p_frame_flags),
+    .dbg_n_new_word      (dbg_n_new_word),
+    .dbg_n_word          (dbg_n_word),
+    .dbg_n_word_cnt      (dbg_n_word_cnt),
+    .dbg_n_frame_len     (dbg_n_frame_len),
+    .dbg_n_frame_number  (dbg_n_frame_number),
+    .dbg_n_frame_flags   (dbg_n_frame_flags),
+    .dbg_n_frame_info_ready(dbg_n_frame_info_ready)
+  );
+
+  frcv_counter_contract_sva u_counter_contract (
+    .clk                 (clk),
+    .rst                 (rst),
+    .hit_sop             (out_if.hit_sop),
+    .hit_eop             (out_if.hit_eop),
+    .dbg_n_crc_error     (dbg_n_crc_error),
+    .dbg_p_crc_err_count (dbg_p_crc_err_count),
+    .dbg_frame_counter_head(dbg_frame_counter_head),
+    .dbg_frame_counter_tail(dbg_frame_counter_tail)
+  );
 
   initial begin
     reset_if.force_reset = 1'b0;
