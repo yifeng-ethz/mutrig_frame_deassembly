@@ -40,6 +40,8 @@ module frame_rcv_ip_dut_sv #(
   output logic                           dbg_receiver_go,
   output logic                           dbg_receiver_force_go,
   output logic                           dbg_terminating_pending,
+  output logic [7:0]                     dbg_csr_control,
+  output logic [7:0]                     dbg_csr_status,
   output logic [31:0]                    dbg_crc_err_counter,
   output logic [31:0]                    dbg_frame_counter,
   output logic [31:0]                    dbg_frame_counter_head,
@@ -100,6 +102,8 @@ module frame_rcv_ip_dut_sv #(
   assign dbg_receiver_go          = dut.receiver_go;
   assign dbg_receiver_force_go    = dut.receiver_force_go;
   assign dbg_terminating_pending  = dut.terminating_pending;
+  assign dbg_csr_control          = dut.csr.control;
+  assign dbg_csr_status           = dut.csr.status;
   assign dbg_crc_err_counter      = dut.csr.crc_err_counter;
   assign dbg_frame_counter        = dut.csr.frame_counter;
   assign dbg_frame_counter_head   = dut.csr.frame_counter_head;

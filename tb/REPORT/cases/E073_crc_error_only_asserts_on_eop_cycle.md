@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Bad-CRC frame with multiple hits
-- **Primary checks:** `error(1)` appears only on terminal hit
+- **Primary checks:** `error(1)` appears only as the post-frame sideband pulse, never on a hit-valid beat
 - **Contract anchor:** EOP-only CRC flagging
 
 ## Execution Evidence

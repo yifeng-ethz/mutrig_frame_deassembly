@@ -5,8 +5,8 @@
 **Primary RTL:** `rtl/frame_rcv_ip.vhd`  
 **Mixed-language shell:** `rtl/sv_ver/frame_rcv_ip/frame_rcv_ip_dut_sv.sv`  
 **Formal harness:** `tb/formal/frcv_formal_top.sv`  
-**Date:** 2026-04-17  
-**Status:** Active formal-readiness and assertion plan for the current VHDL DUT.
+**Date:** 2026-04-18  
+**Status:** Active mixed-language SVA plan with `/data1` OSS formal checkpoints for the current VHDL DUT.
 
 This plan applies the packet-structure methodology from Doug Smith,
 "Doing the Impossible: Using Formal Verification on Packet Based Data Paths"
@@ -44,12 +44,18 @@ Added in the current tree:
   - constrains a legal ingress byte grammar for future formal runs
 - `tb/formal/frcv_formal_top.sv`
   - mixed-language formal harness around the wrapper plus the active SVA
+- `tb/formal/oss/crc16_calc_residue.sby`
+  - `/data1` OSS formal proof of the standalone CRC residue contract
+- `tb/formal/oss/frame_rcv_ip_crc_counter.sby`
+  - `/data1` OSS bounded proof that a bad-CRC frame retires with one CSR counter increment
 
 Current environment note:
 
-- `qverify` / PropCheck is not on `PATH` in this workspace as of 2026-04-17
-- the harness is therefore compile-validated today and laid out so a formal
-  tool invocation can be added without changing the structure again
+- `qverify` / PropCheck is not on `PATH` in this workspace as of 2026-04-18
+- the active formal flow in this repo is the `/data1/oss_formal` stack
+- current checkpoints:
+  - `make -C tb/formal oss_crc_prove` = PASS by k-induction
+  - `make -C tb/formal oss_dut_crc_counter_prove` = PASS as bounded BMC over the scripted bad-CRC frame scenario
 
 ## 2. Seven-step packet method mapped to this DUT
 
@@ -132,7 +138,7 @@ for the IP.
 | B4 | long-hit byte collection -> emitted hit word | `FS_UNPACK` long path | catches 6-byte packing and `sop/eop` off-by-one errors | `frcv_output_contract_sva` |
 | B5 | short-hit byte/nibble collection -> emitted hit word | `FS_UNPACK` + `FS_UNPACK_EXTRA` short path | catches nibble-sharing bugs and odd/even hit boundary mistakes | `frcv_output_contract_sva` |
 | B6 | parser next-state hit pulse -> registered `hit_type0` outputs | `n_new_word`, `proc_output_pkt_hits*` | exact "between processes" packet contract | `frcv_output_contract_sva` |
-| B7 | CRC check result -> hit error1 + CRC counter | `FS_CRC_CHECK`, `n_crc_error`, `p_crc_err_count` | proves CRC indication and counting are coherent | `frcv_counter_contract_sva` |
+| B7 | CRC check result -> output CRC sideband + CRC counter | `FS_CRC_CHECK`, `n_crc_error`, `p_crc_err_count` | proves CRC indication and counting are coherent across the process boundary | `frcv_output_contract_sva`, `frcv_counter_contract_sva`, `tb/formal/oss/frame_rcv_ip_crc_counter.sby` |
 | B8 | SOP/EOP outputs -> frame counters | `proc_avmm_slave_csr` | proves scoreboard/accounting path matches markers | `frcv_counter_contract_sva` |
 | B9 | TERMINATING delayed-tail admit -> end-of-run pulse | `terminating_pending`, `terminating_frame_start_seen`, `terminating_empty_frame_done` | known high-risk closure path from recent bug fixes | wrapper ready, formal property backlog |
 
@@ -218,11 +224,13 @@ Status:
 
 Mandatory properties:
 
-- `error[1]` only appears on `eop`
+- `dbg_n_crc_error` causes a one-cycle `error[1]` sideband pulse at the output boundary
+- that sideband pulse stays off the `hit_valid/eop` beat
 - `n_crc_error` increments `p_crc_err_count` by exactly one
 - no decrement or multi-step jump is allowed
 
-Implemented today in `frcv_counter_contract_sva`.
+Implemented today in `frcv_output_contract_sva`, `frcv_counter_contract_sva`,
+and the bounded OSS proof `frame_rcv_ip_crc_counter.sby`.
 
 ### 5.8 B8: frame counter boundary
 
@@ -256,17 +264,15 @@ The formal plan needs two classes of malformed proofs:
    CRC counter
 2. malformed frames that should be dropped or aborted before CRC check
 
-Known current harness gap from `BUG_HISTORY.md`:
+The original simulation harness gap `FRCV-2026-04-17-004` is now fixed, so the
+formal backlog can treat the malformed classes as distinct proof targets rather
+than as missing-stimulus placeholders:
 
-- `FRCV-2026-04-17-004`
 - `X034` bad trailer replacement
 - `X035` extra payload after declared length
 - `X036` new header inside payload
 - `X048` short new header inside payload
 - `X049` short extra payload after declared length
-
-Those cases are explicitly part of the formal backlog because the current
-doc-case engine does not yet inject them distinctly enough for signoff.
 
 ## 7. Simulation vs formal split
 
@@ -276,6 +282,8 @@ The intended workflow is:
 2. use the same SVA modules in the formal harness
 3. add formal-only input assumptions to bound the state space
 4. move one boundary at a time from "simulation observed" to "formally proved"
+5. keep the OSS proof subset listed explicitly so bounded proofs are not mistaken
+   for full closure
 
 That avoids the common failure mode where simulation and formal grow two
 different contract definitions.
@@ -285,10 +293,8 @@ different contract definitions.
 Not done in this step:
 
 - no full SV rewrite of `frame_rcv_ip`
-- no mutation of the packaged VHDL RTL
-- no claim of formal proof closure yet
-- no attempt to solve malformed-packet proofs before the missing stimulus hooks
-  are modeled distinctly
+- no claim of full packet-grammar proof closure yet
+- no complete malformed-packet proof suite yet
 
 ## 9. Immediate next proof candidates
 

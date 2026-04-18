@@ -41,6 +41,8 @@ module tb_top;
   logic                         dbg_receiver_go;
   logic                         dbg_receiver_force_go;
   logic                         dbg_terminating_pending;
+  logic [7:0]                   dbg_csr_control;
+  logic [7:0]                   dbg_csr_status;
   logic [31:0]                  dbg_crc_err_counter;
   logic [31:0]                  dbg_frame_counter;
   logic [31:0]                  dbg_frame_counter_head;
@@ -128,6 +130,8 @@ module tb_top;
     .dbg_receiver_go             (dbg_receiver_go),
     .dbg_receiver_force_go       (dbg_receiver_force_go),
     .dbg_terminating_pending     (dbg_terminating_pending),
+    .dbg_csr_control             (dbg_csr_control),
+    .dbg_csr_status              (dbg_csr_status),
     .dbg_crc_err_counter         (dbg_crc_err_counter),
     .dbg_frame_counter           (dbg_frame_counter),
     .dbg_frame_counter_head      (dbg_frame_counter_head),
@@ -204,14 +208,17 @@ module tb_top;
     .dbg_n_frame_len     (dbg_n_frame_len),
     .dbg_n_frame_number  (dbg_n_frame_number),
     .dbg_n_frame_flags   (dbg_n_frame_flags),
-    .dbg_n_frame_info_ready(dbg_n_frame_info_ready)
+    .dbg_n_frame_info_ready(dbg_n_frame_info_ready),
+    .dbg_n_crc_error     (dbg_n_crc_error)
   );
 
   frcv_counter_contract_sva u_counter_contract (
     .clk                 (clk),
     .rst                 (rst),
+    .hit_valid           (out_if.hit_valid),
     .hit_sop             (out_if.hit_sop),
     .hit_eop             (out_if.hit_eop),
+    .hit_error           (out_if.hit_error),
     .dbg_n_crc_error     (dbg_n_crc_error),
     .dbg_p_crc_err_count (dbg_p_crc_err_count),
     .dbg_frame_counter_head(dbg_frame_counter_head),

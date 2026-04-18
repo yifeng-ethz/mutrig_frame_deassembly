@@ -51,7 +51,7 @@
 | P031_cadence_8_8_256_8 | S | medium soak cadence | counters and outputs stay coherent | control timing |
 | P032_cadence_16_16_512_16 | K | long dwell cadence | no missed first frame after long prepare/sync | control timing |
 | P033_cadence_running_only_1024 | S | stay in `RUNNING` for 1024 cycles bursts before stop | sustained continuous parsing remains stable | running-only stress |
-| P034_cadence_idle_monitoring_only | S | remain in `IDLE` and parse monitoring frames only | force-go path stays stable over long runs | idle monitoring |
+| P034_cadence_idle_monitoring_only | S | remain in `IDLE` for an extended cadence run without reopening `RUNNING` | parser stays blocked and quiescent for the whole run | quiescent `IDLE` contract |
 | P035_cadence_stop_after_every_frame | S | stop after each accepted frame | exactly one frame drains per cycle | stop/start churn |
 | P036_cadence_stop_every_other_frame | S | alternate one running frame and one blocked interval | no stale header acceptance leaks across states | state transitions |
 | P037_cadence_legal_and_illegal_ctrl_mix | S | interleave legal commands with illegal words | recovery to legal states remains deterministic | control decode robustness |

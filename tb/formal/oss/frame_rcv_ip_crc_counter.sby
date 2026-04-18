@@ -1,0 +1,17 @@
+[options]
+mode bmc
+depth 24
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+plugin -i /data1/oss_formal/current/share/yosys/plugins/ghdl.so
+ghdl --std=08 crc16_calc.vhd frame_rcv_ip.vhd -e frame_rcv_ip
+read_verilog -formal -sv frame_rcv_ip_crc_counter_formal.sv
+prep -top frame_rcv_ip_crc_counter_formal
+
+[files]
+../../../rtl/crc16_calc.vhd
+../../../rtl/frame_rcv_ip.vhd
+frame_rcv_ip_crc_counter_formal.sv

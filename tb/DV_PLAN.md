@@ -94,7 +94,7 @@ The DV plan therefore has two obligations:
 | F11 | Channel-width generic | `_hw.tcl` `myelaborate` | `channel/maxChannel` behavior across builds |
 | F12 | CSR address-width generic | `_hw.tcl` `myelaborate` | address decode and unused-word behavior |
 | F13 | `MODE_HALT` corner behavior | parser comma handling | abort-vs-hold contract |
-| F14 | IDLE monitoring path | `receiver_force_go` path | header acceptance while run state is `IDLE` |
+| F14 | IDLE quiescent block path | `proc_run_control_mgmt_agent`, `proc_enable_ctrl` | header rejection while run state is `IDLE` until `RUNNING` reopens parsing |
 | F15 | `RUN_PREPARE` reset semantics | parser + CSR logic | state/counter reset timing |
 | F16 | `TERMINATING` boundary | `RUN_SEQ_UPGRADE_PLAN.md` + RTL | no fresh header from `FS_IDLE`, open-frame drain |
 | F17 | Current ready-handshake gap | `asi_ctrl_ready <= '1'` | negative verification evidence |

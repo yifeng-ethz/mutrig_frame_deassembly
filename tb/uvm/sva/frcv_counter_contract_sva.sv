@@ -6,8 +6,10 @@
 module frcv_counter_contract_sva (
   input logic        clk,
   input logic        rst,
+  input logic        hit_valid,
   input logic        hit_sop,
   input logic        hit_eop,
+  input logic [2:0]  hit_error,
   input logic        dbg_n_crc_error,
   input logic [31:0] dbg_p_crc_err_count,
   input logic [31:0] dbg_frame_counter_head,
@@ -16,6 +18,8 @@ module frcv_counter_contract_sva (
 
   logic        exp_crc_pending;
   logic [31:0] exp_crc_count;
+  logic        exp_hit_crc_pending;
+  logic [31:0] exp_hit_crc_count;
   logic        exp_sop_pending;
   logic [31:0] exp_head_count;
   logic        exp_eop_pending;
@@ -25,6 +29,8 @@ module frcv_counter_contract_sva (
     if (rst) begin
       exp_crc_pending <= 1'b0;
       exp_crc_count   <= '0;
+      exp_hit_crc_pending <= 1'b0;
+      exp_hit_crc_count   <= '0;
       exp_sop_pending <= 1'b0;
       exp_head_count  <= '0;
       exp_eop_pending <= 1'b0;
@@ -32,6 +38,8 @@ module frcv_counter_contract_sva (
     end else begin
       exp_crc_pending <= dbg_n_crc_error;
       exp_crc_count   <= dbg_p_crc_err_count + 32'd1;
+      exp_hit_crc_pending <= hit_valid && hit_eop && hit_error[1];
+      exp_hit_crc_count   <= dbg_p_crc_err_count + 32'd1;
       exp_sop_pending <= hit_sop;
       exp_head_count  <= dbg_frame_counter_head + 32'd1;
       exp_eop_pending <= hit_eop;
@@ -42,6 +50,11 @@ module frcv_counter_contract_sva (
   property p_crc_count_matches_next_state;
     @(posedge clk) disable iff (rst)
       exp_crc_pending |-> (dbg_p_crc_err_count == exp_crc_count);
+  endproperty
+
+  property p_crc_count_follows_eop_error1;
+    @(posedge clk) disable iff (rst)
+      exp_hit_crc_pending |-> (dbg_p_crc_err_count == exp_hit_crc_count);
   endproperty
 
   property p_head_counter_follows_sop;
@@ -61,6 +74,9 @@ module frcv_counter_contract_sva (
 
   assert property (p_crc_count_matches_next_state)
     else $error("FRCV_COUNTER_SVA CRC error counter diverged from n_crc_error");
+
+  assert property (p_crc_count_follows_eop_error1)
+    else $error("FRCV_COUNTER_SVA CRC error counter missed a hit error1 EOP");
 
   assert property (p_head_counter_follows_sop)
     else $error("FRCV_COUNTER_SVA frame_counter_head missed a SOP");

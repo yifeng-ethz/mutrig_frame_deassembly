@@ -3,7 +3,7 @@
 MuTRiG frame receiver / deassembly IP that converts the `rx8b1k` byte stream into
 `hit_type0` packets, `headerinfo` metadata pulses, and CSR-visible frame / CRC counters.
 
-**Version:** `26.0.6.0417`
+**Version:** `26.0.6.0418`
 **Module name:** `mutrig_frame_deassembly`
 **Platform Designer group:** `Mu3e Data Plane / Modules`
 
@@ -22,7 +22,7 @@ canonical `rtl/` and `script/` trees.
 
 - DV dashboard: [`tb/DV_REPORT.md`](tb/DV_REPORT.md)
 - DV evidence tree: [`tb/REPORT/README.md`](tb/REPORT/README.md)
-- Open harness issue: continuous-frame `unexpected_outputs` in the no-restart cross runs
+- Open harness issue: continuous-frame `FRCV_SCB_CASE_END` warning / pending-queue cleanup (`FRCV-2026-04-18-005`)
 - Standalone synthesis scaffold: [`syn/quartus/`](syn/quartus/)
 
 ## Long-Run Workflow

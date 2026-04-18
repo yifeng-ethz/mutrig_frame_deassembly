@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Drive a frame whose CRC engine ends at `0x7FF2`
-- **Primary checks:** no CRC error is flagged
+- **Primary checks:** no CRC sideband pulse is flagged
 - **Contract anchor:** `FS_CRC_CHECK` magic compare
 
 ## Execution Evidence

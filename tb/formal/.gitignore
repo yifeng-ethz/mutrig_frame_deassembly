@@ -1,3 +1,5 @@
 work_formal/
 transcript
 vsim.wlf
+oss/crc16_calc_residue/
+oss/frame_rcv_ip_crc_counter/

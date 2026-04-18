@@ -88,9 +88,9 @@
 
 | ID | Method | Scenario | Primary checks | Contract anchor |
 |---|---|---|---|---|
-| E071_crc_magic_match_7ff2_only_case | D | Drive a frame whose CRC engine ends at `0x7FF2` | no CRC error is flagged | `FS_CRC_CHECK` magic compare |
-| E072_crc_magic_onebit_off_is_error | D | Drive a frame whose CRC engine ends at `0x7FF3` | CRC error is flagged | exact magic compare |
-| E073_crc_error_only_asserts_on_eop_cycle | D | Bad-CRC frame with multiple hits | `error(1)` appears only on terminal hit | EOP-only CRC flagging |
+| E071_crc_magic_match_7ff2_only_case | D | Drive a frame whose CRC engine ends at `0x7FF2` | no CRC sideband pulse is flagged | `FS_CRC_CHECK` magic compare |
+| E072_crc_magic_onebit_off_is_error | D | Drive a frame whose CRC engine ends at `0x7FF3` | CRC sideband pulse is flagged | exact magic compare |
+| E073_crc_error_only_asserts_on_eop_cycle | D | Bad-CRC frame with multiple hits | `error(1)` appears only as the post-frame sideband pulse, never on a hit-valid beat | CRC sideband timing |
 | E074_hit_error_latches_across_multi_byte_long_word | D | Assert byte error early in a long hit | `error(0)` survives until word commit | hit-error latch lifetime |
 | E075_hit_error_clears_after_word_commit | D | Inject error on hit N, keep hit N+1 clean | only hit N reports `error(0)` | hit-error clear behavior |
 | E076_hit_error_latches_across_multi_byte_short_word | D | Assert byte error during short-word reconstruction | committed short hit reports `error(0)` | short hit-error latch |
@@ -106,7 +106,7 @@
 | E086_mode_halt1_comma_on_unpack_byte_holds_state | D | `MODE_HALT=1`, comma in payload byte | parser does not drop to idle | hold timing edge |
 | E087_recovery_after_mode0_abort_starts_next_clean_frame | D | Abort one frame in mode0, then inject a clean frame | next frame parses cleanly | mode0 recovery closure |
 | E088_mode1_resume_with_error_bits_preserved | D | Hold through comma in mode1 and complete frame | emitted hits reflect the current in-frame error history only | mode1 recovery semantics |
-| E089_clean_frame_after_bad_crc_clears_error1 | D | Bad frame followed by clean frame | clean frame has `error(1)=0` | CRC error nonstickiness |
+| E089_clean_frame_after_bad_crc_clears_error1 | D | Bad frame followed by clean frame | clean frame has no `error(1)` sideband pulse | CRC error nonstickiness |
 | E090_clean_frame_after_hit_error_clears_error0 | D | Hit-error frame followed by clean frame | clean frame has `error(0)=0` | hit-error nonstickiness |
 
 ## 4. CSR And Generic Boundaries (`E091-E110`)

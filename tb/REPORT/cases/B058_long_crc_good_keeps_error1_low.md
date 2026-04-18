@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Long frame with correct CRC
-- **Primary checks:** final hit has `error(1)=0`
+- **Primary checks:** no post-frame `error(1)` sideband pulse is emitted
 - **Contract anchor:** `FS_CRC_CHECK` good path
 
 ## Execution Evidence

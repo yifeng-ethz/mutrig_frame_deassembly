@@ -31,12 +31,14 @@ module frcv_output_contract_sva #(
   input logic [9:0]                   dbg_n_frame_len,
   input logic [15:0]                  dbg_n_frame_number,
   input logic [5:0]                   dbg_n_frame_flags,
-  input logic                         dbg_n_frame_info_ready
+  input logic                         dbg_n_frame_info_ready,
+  input logic                         dbg_n_crc_error
 );
 
   logic                         exp_hdr_pending;
   logic [41:0]                  exp_hdr_data;
   logic [CHANNEL_WIDTH-1:0]     exp_hdr_channel;
+  logic                         exp_crc_sideband_pending;
 
   function automatic logic [3:0] resize_channel_to_asic(
     input logic [CHANNEL_WIDTH-1:0] channel_v
@@ -100,11 +102,13 @@ module frcv_output_contract_sva #(
       exp_hdr_pending <= 1'b0;
       exp_hdr_data    <= '0;
       exp_hdr_channel <= '0;
+      exp_crc_sideband_pending <= 1'b0;
     end else begin
       exp_hdr_pending <= dbg_n_frame_info_ready;
       exp_hdr_data    <= pack_headerinfo_data(
         dbg_n_frame_number, dbg_n_frame_len, dbg_n_word_cnt, dbg_n_frame_flags);
       exp_hdr_channel <= rx_channel;
+      exp_crc_sideband_pending <= dbg_n_crc_error;
     end
   end
 
@@ -129,9 +133,14 @@ module frcv_output_contract_sva #(
       (hit_sop || hit_eop) |-> hit_valid;
   endproperty
 
-  property p_error1_only_on_eop;
+  property p_error1_is_sideband_only;
     @(posedge clk) disable iff (rst)
-      (hit_valid && hit_error[1]) |-> hit_eop;
+      hit_error[1] |-> (!hit_valid && !hit_eop);
+  endproperty
+
+  property p_crc_error_sideband_matches_next_state;
+    @(posedge clk) disable iff (rst)
+      exp_crc_sideband_pending |-> (hit_error[1] && !hit_valid && !hit_eop);
   endproperty
 
   property p_header_pending_matches_output;
@@ -162,8 +171,11 @@ module frcv_output_contract_sva #(
   assert property (p_markers_require_valid)
     else $error("FRCV_OUTPUT_SVA SOP/EOP asserted without hit_valid");
 
-  assert property (p_error1_only_on_eop)
-    else $error("FRCV_OUTPUT_SVA CRC error bit asserted off-EOP");
+  assert property (p_error1_is_sideband_only)
+    else $error("FRCV_OUTPUT_SVA CRC error bit must stay off the hit-valid/EOP beat");
+
+  assert property (p_crc_error_sideband_matches_next_state)
+    else $error("FRCV_OUTPUT_SVA CRC sideband pulse did not match dbg_n_crc_error");
 
   assert property (p_header_pending_matches_output)
     else $error("FRCV_OUTPUT_SVA headerinfo output mismatched the sampled frame header");

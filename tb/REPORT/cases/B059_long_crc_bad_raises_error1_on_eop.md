@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Long frame with incorrect CRC
-- **Primary checks:** final hit has `error(1)=1` at `eop`
+- **Primary checks:** one-cycle post-frame `error(1)` sideband pulse is emitted off the `valid/eop` beat
 - **Contract anchor:** `FS_CRC_CHECK` bad path
 
 ## Execution Evidence

@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Drive a frame whose CRC engine ends at `0x7FF3`
-- **Primary checks:** CRC error is flagged
+- **Primary checks:** CRC sideband pulse is flagged
 - **Contract anchor:** exact magic compare
 
 ## Execution Evidence

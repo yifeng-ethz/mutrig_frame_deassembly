@@ -11,8 +11,8 @@ All cases in this file are grounded in the current RTL behavior, including the k
 | ID | Method | Scenario | Primary checks | Contract anchor |
 |---|---|---|---|---|
 | B001_reset_idle_outputs_quiet | D | Assert reset, hold clock, release into default state | `hit_type0_valid=0`, `headerinfo_valid=0`, CSR counters clear | reset branch of parser, outputs, CSR |
-| B002_idle_force_go_monitor_path_open | D | Stay in `IDLE`, drive a valid header sequence | parser accepts header because `receiver_force_go=1` | `proc_run_control_mgmt_agent`, `proc_enable_ctrl` |
-| B003_idle_force_go_ignores_csr_mask | D | Write `csr.control(0)=0`, remain in `IDLE`, drive header | header still accepted in monitoring mode | `receiver_force_go` bypass of CSR mask |
+| B002_idle_force_go_monitor_path_open | D | Stay in `IDLE`, drive a valid header sequence | parser remains blocked because current RTL keeps `receiver_force_go=0` in `IDLE` | `proc_run_control_mgmt_agent`, `proc_enable_ctrl` |
+| B003_idle_force_go_ignores_csr_mask | D | Write `csr.control(0)=0`, remain in `IDLE`, drive header | frame stays blocked; there is no `IDLE` monitor-mode bypass in current RTL | `receiver_force_go` path is inactive in `IDLE` |
 | B004_running_needs_csr_enable_high | D | Enter `RUNNING` with `csr.control(0)=1` and drive header | fresh header opens only when running and unmasked | `receiver_go` plus CSR enable |
 | B005_running_mask_low_blocks_header_start | D | Enter `RUNNING`, write `csr.control(0)=0`, drive header | `FS_IDLE` does not leave idle | start condition in `proc_frame_rcv_comb` |
 | B006_run_prepare_clears_parser_state | D | Open a frame, then issue `RUN_PREPARE` | parser returns to `FS_IDLE`, partial frame is discarded without false outputs | reset path on `run_state_cmd = RUN_PREPARE` |
@@ -23,7 +23,7 @@ All cases in this file are grounded in the current RTL behavior, including the k
 | B011_ctrl_unknown_word_enters_error | D | Drive non-one-hot control word | `run_state_cmd=ERROR`, parser stays blocked | default branch of control decode |
 | B012_ctrl_ready_high_with_valid | D | Pulse any legal control word | `asi_ctrl_ready` stays high during valid | unconditional ready assignment |
 | B013_ctrl_ready_high_without_valid | D | Leave control bus idle | `asi_ctrl_ready` remains high | unconditional ready assignment |
-| B014_ctrl_decode_idle_force_go | D | Send `IDLE` word | `receiver_force_go=1`, `receiver_go=0` | control decode table |
+| B014_ctrl_decode_idle_force_go | D | Send `IDLE` word | `receiver_force_go=0`, `receiver_go=0` | control decode table |
 | B015_ctrl_decode_run_prepare_disable | D | Send `RUN_PREPARE` word | both `receiver_go` and `receiver_force_go` low | control decode table |
 | B016_ctrl_decode_sync_disable | D | Send `SYNC` word | parser blocked for new headers | control decode table |
 | B017_ctrl_decode_running_go | D | Send `RUNNING` word | `receiver_go=1`, `receiver_force_go=0` | control decode table |
@@ -72,8 +72,8 @@ All cases in this file are grounded in the current RTL behavior, including the k
 | B055_long_parity_error_raises_error0 | D | Assert parity error on a long-hit byte | error bit 0 rises on emitted hit | hit-error latch path |
 | B056_long_decode_error_raises_error0 | D | Assert decode error on a long-hit byte | error bit 0 rises on emitted hit | hit-error latch path |
 | B057_long_loss_sync_propagates_error2 | D | Assert loss-sync during a long frame | every emitted hit shows `error(2)=1` while active | lane-corrupt propagation |
-| B058_long_crc_good_keeps_error1_low | D | Long frame with correct CRC | final hit has `error(1)=0` | `FS_CRC_CHECK` good path |
-| B059_long_crc_bad_raises_error1_on_eop | D | Long frame with incorrect CRC | final hit has `error(1)=1` at `eop` | `FS_CRC_CHECK` bad path |
+| B058_long_crc_good_keeps_error1_low | D | Long frame with correct CRC | no post-frame `error(1)` sideband pulse is emitted | `FS_CRC_CHECK` good path |
+| B059_long_crc_bad_raises_error1_on_eop | D | Long frame with incorrect CRC | one-cycle post-frame `error(1)` sideband pulse is emitted off the `valid/eop` beat | `FS_CRC_CHECK` bad path |
 | B060_long_crc_bad_increments_crc_counter | D | Send one bad long frame | `crc_err_counter` increments by one | CSR update from `p_crc_err_count` |
 | B061_sop_increments_frame_counter_head | D | One clean long frame | `frame_counter_head` increments on `sop` | CSR head counter logic |
 | B062_eop_increments_frame_counter_tail | D | One clean long frame | `frame_counter_tail` increments on `eop` | CSR tail counter logic |
@@ -98,7 +98,7 @@ All cases in this file are grounded in the current RTL behavior, including the k
 | B076_short_parity_error_raises_error0 | D | Assert parity error during short unpack | `error(0)=1` on affected hit | hit-error latch path |
 | B077_short_decode_error_raises_error0 | D | Assert decode error during short unpack | `error(0)=1` on affected hit | hit-error latch path |
 | B078_short_loss_sync_propagates_error2 | D | Assert loss-sync during short frame | emitted hits carry `error(2)=1` | lane-corrupt propagation |
-| B079_short_crc_bad_raises_error1_on_last_hit | D | Short frame with bad CRC | final hit carries `error(1)=1` | short CRC bad path |
+| B079_short_crc_bad_raises_error1_on_last_hit | D | Short frame with bad CRC | one-cycle post-frame `error(1)` sideband pulse is emitted off the `valid/eop` beat | short CRC bad path |
 | B080_short_crc_counter_accumulates | D | Send two bad short frames | `crc_err_counter` increments twice | shared CRC counter logic |
 | B081_short_frame_counter_updates | D | Clean short frame | head/tail/frame-counter semantics match long mode | mode-independent counters |
 
@@ -122,8 +122,8 @@ All cases in this file are grounded in the current RTL behavior, including the k
 | B095_mode_halt1_comma_inside_frame_holds_state | D | `MODE_HALT=1`, inject comma mid-frame | parser does not drop to `FS_IDLE` immediately | comma handling branch |
 | B096_running_mask_toggle_between_frames | D | Toggle `csr.control(0)` between clean frames | next frame start obeys new mask value | registered enable control |
 | B097_mask_toggle_midframe_does_not_abort_current_frame | D | Drop `csr.control(0)` after a frame opened | current frame still completes | `enable` only used in `FS_IDLE` |
-| B098_idle_monitoring_accepts_header_without_running | D | Leave run state in `IDLE`, do not send `RUNNING` | header is still parsed | receiver-force-go monitor mode |
-| B099_idle_monitoring_still_ignores_csr_zero | D | In `IDLE`, write `csr.control(0)=0`, drive frame | frame still parses | monitor-mode bypass of CSR |
+| B098_idle_monitoring_accepts_header_without_running | D | Leave run state in `IDLE`, do not send `RUNNING` | header stays blocked until `RUNNING` reopens parsing | `IDLE` is quiescent in current RTL |
+| B099_idle_monitoring_still_ignores_csr_zero | D | In `IDLE`, write `csr.control(0)=0`, drive frame | frame remains blocked; CSR mask does not matter while `IDLE` is already closed | no monitor-mode bypass of CSR |
 | B100_link_test_keeps_outputs_quiet | D | Hold `LINK_TEST` and drive bytes | no new header start | blocked state behavior |
 | B101_sync_test_keeps_outputs_quiet | D | Hold `SYNC_TEST` and drive bytes | no new header start | blocked state behavior |
 | B102_reset_state_keeps_outputs_quiet | D | Hold `RESET` and drive bytes | no new header start | blocked state behavior |
@@ -137,9 +137,9 @@ All cases in this file are grounded in the current RTL behavior, including the k
 | B105_run_prepare_sync_running_spine | D | Drive `RUN_PREPARE -> SYNC -> RUNNING` then one frame | bring-up sequence parses first legal frame cleanly | planned system cadence |
 | B106_running_to_terminating_during_header_bytes | D | Issue `TERMINATING` while header bytes are still being consumed | frame already opened continues through payload | open-frame drain behavior |
 | B107_running_to_terminating_during_unpack_finishes_frame | D | Stop during hit unpack | all declared hits emerge once, then parser returns idle | open-frame drain behavior |
-| B108_terminating_to_idle_returns_quiescent | D | Finish frame, then issue `IDLE` | outputs return quiet except future monitor-mode frames | run-state quiescence |
+| B108_terminating_to_idle_returns_quiescent | D | Finish frame, then issue `IDLE` | outputs return quiet and stay blocked until a later `RUNNING` command | run-state quiescence |
 | B109_terminating_blocks_second_header_after_first_eop | D | Two back-to-back candidate frames, stop after first opens | first frame completes, second never starts | upgrade-plan current contract |
-| B110_idle_after_terminating_restores_monitoring | D | `TERMINATING -> IDLE`, then drive new frame | monitor-mode header acceptance returns | `IDLE` force-go path |
+| B110_idle_after_terminating_restores_monitoring | D | `TERMINATING -> IDLE`, then drive new frame | `IDLE` remains quiescent; parsing does not reopen without `RUNNING` | current `IDLE` contract |
 | B111_system_run_sequence_spine_matches_upgrade_plan | D | Replay full system cadence with open-frame stop | observed behavior matches current description in upgrade plan | cross-check with plan |
 | B112_long_good_frames_leave_crc_counter_stable | D | Many clean long frames | CRC counter remains unchanged | CRC counter baseline |
 | B113_bad_frames_accumulate_crc_counter | D | Mix multiple bad long/short frames | CRC counter equals number of bad frames | shared CRC accounting |

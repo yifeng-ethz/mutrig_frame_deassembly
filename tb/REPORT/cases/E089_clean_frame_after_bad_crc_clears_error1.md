@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Bad frame followed by clean frame
-- **Primary checks:** clean frame has `error(1)=0`
+- **Primary checks:** clean frame has no `error(1)` sideband pulse
 - **Contract anchor:** CRC error nonstickiness
 
 ## Execution Evidence

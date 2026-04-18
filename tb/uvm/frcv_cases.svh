@@ -14,6 +14,8 @@
     localparam int unsigned MAX_DOC_ITERATIONS_CONTINUOUS_EXTENSIVE = 512;
     localparam int unsigned MAX_DOC_PAYLOAD_BYTES_ISOLATED_EXTENSIVE = 10000000;
     localparam int unsigned MAX_DOC_PAYLOAD_BYTES_CONTINUOUS_EXTENSIVE = 131072;
+    localparam int unsigned DOC_CASE_DRAIN_MAX_CYCLES = 512;
+    localparam int unsigned TERMINATING_CLOSE_MAX_CYCLES = 2300;
 
     covergroup doc_case_cg with function sample(int unsigned global_case_idx,
                                                 int unsigned bucket_case_idx,
@@ -58,6 +60,12 @@
           return m_env.m_scb.history[idx];
       end
       return null;
+    endfunction
+
+    function automatic frcv_csr_obs_item find_last_csr_obs();
+      if (m_env.m_scb.csr_history.size() == 0)
+        return null;
+      return m_env.m_scb.csr_history[m_env.m_scb.csr_history.size() - 1];
     endfunction
 
     task automatic drive_rx_symbol(bit valid, bit is_k, byte unsigned byte_value,
@@ -126,13 +134,22 @@
     endtask
 
     task automatic send_long_zero_hit_frame(int unsigned frame_number);
+      byte unsigned frame_bytes[$];
+      bit [15:0]    crc_trailer;
+
+      frame_bytes.push_back(byte'(frame_number[15:8]));
+      frame_bytes.push_back(byte'(frame_number[7:0]));
+      frame_bytes.push_back(8'h00);
+      frame_bytes.push_back(8'h00);
+      crc_trailer = frcv_crc16_trailer(frame_bytes);
+
       drive_symbol(1'b1, HEADER_BYTE);
       drive_symbol(1'b0, byte'(frame_number[15:8]));
       drive_symbol(1'b0, byte'(frame_number[7:0]));
       drive_symbol(1'b0, 8'h00);
       drive_symbol(1'b0, 8'h00);
-      drive_symbol(1'b0, 8'h00);
-      drive_symbol(1'b0, 8'h00);
+      drive_symbol(1'b0, byte'(crc_trailer[15:8]));
+      drive_symbol(1'b0, byte'(crc_trailer[7:0]));
     endtask
 
     function automatic int unsigned extract_case_index(string id);
@@ -168,17 +185,9 @@
     endtask
 
     task automatic do_b004_running_needs_csr_enable_high();
-      int unsigned base_hits;
-      int unsigned base_real_eops;
-      int unsigned base_headers;
-
       wait_for_reset_release();
       run_start();
-      base_hits      = m_env.m_scb.hit_count;
-      base_real_eops = m_env.m_scb.real_eop_count;
-      base_headers   = m_env.m_scb.header_count;
-      send_long_frame(16'h0004, 48'h112233445566);
-      wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 32, case_id);
+      send_clean_recovery_frame(8'h02, 16'h0004, 48'h112233445566, "none", case_id);
     endtask
 
     task automatic do_b005_running_mask_low_blocks_header_start();
@@ -200,15 +209,22 @@
     endtask
 
     task automatic do_b006_run_prepare_clears_parser_state();
+      int unsigned base_hits;
+      int unsigned base_real_eops;
+      int unsigned base_headers;
+      int unsigned base_endofruns;
+
       wait_for_reset_release();
       run_start();
+      base_hits       = m_env.m_scb.hit_count;
+      base_real_eops  = m_env.m_scb.real_eop_count;
+      base_headers    = m_env.m_scb.header_count;
+      base_endofruns  = m_env.m_scb.endofrun_count;
       drive_symbol(1'b1, HEADER_BYTE);
       drive_symbol(1'b0, 8'h00);
       drive_symbol(1'b0, 8'h06);
       send_ctrl(CTRL_RUN_PREPARE, "RUN_PREPARE");
-      wait_cycles(4);
-      if (m_env.m_scb.hit_count != 0 || m_env.m_scb.real_eop_count != 0)
-        `uvm_fatal("FRCV_CASE", "RUN_PREPARE must clear any partial parse without emitting hits")
+      expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 8, case_id);
     endtask
 
     task automatic do_b009_terminating_blocks_new_header_from_idle();
@@ -222,7 +238,7 @@
       base_endofruns = m_env.m_scb.endofrun_count;
       send_ctrl(CTRL_TERMINATING, "TERMINATING");
       wait_for_ctrl_ready_low(4, case_id);
-      wait_for_endofrun_count(base_endofruns + 1, 16, case_id);
+      wait_for_endofrun_count(base_endofruns + 1, TERMINATING_CLOSE_MAX_CYCLES, case_id);
       wait_for_ctrl_ready_high(24, case_id);
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
@@ -235,6 +251,7 @@
     task automatic do_b010_terminating_allows_open_frame_to_finish();
       int unsigned base_hits;
       int unsigned base_real_eops;
+      int unsigned base_headers;
       int unsigned base_endofruns;
       bit [47:0]   active_hit_word;
 
@@ -242,8 +259,11 @@
       run_start();
       base_hits       = m_env.m_scb.hit_count;
       base_real_eops  = m_env.m_scb.real_eop_count;
+      base_headers    = m_env.m_scb.header_count;
       base_endofruns = m_env.m_scb.endofrun_count;
       active_hit_word = 48'hCAFEBABE1234;
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+        random_doc_case(), 1'b0, 1, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "none", 6);
 
       drive_symbol(1'b1, HEADER_BYTE);
       drive_symbol(1'b0, 8'h00);
@@ -266,8 +286,8 @@
         end
       join
 
-      wait_for_counts(base_hits + 1, base_real_eops + 1, m_env.m_scb.header_count, 48, case_id);
-      wait_for_endofrun_count(base_endofruns + 1, 48, case_id);
+      wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 48, case_id);
+      wait_for_endofrun_count(base_endofruns + 1, TERMINATING_CLOSE_MAX_CYCLES, case_id);
       wait_for_ctrl_ready_high(48, case_id);
     endtask
 
@@ -315,6 +335,8 @@
       run_start();
       base_headers = m_env.m_scb.header_count;
       base_hits    = m_env.m_scb.hit_count;
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+        random_doc_case(), 1'b0, 0, 0, 1, 0, 0, 1'b0, 1'b0, 1'b0, 1'b0, "none", 6);
       send_long_zero_hit_frame(16'h0039);
       wait_cycles(20);
       if (m_env.m_scb.header_count != base_headers + 1)
@@ -327,21 +349,212 @@
     endtask
 
     task automatic do_b041_long_one_hit_sop_and_eop_same_transfer();
-      int unsigned base_hits;
-      int unsigned base_real_eops;
-      int unsigned base_headers;
       frcv_obs_item hit_obs;
 
       wait_for_reset_release();
       run_start();
-      base_hits      = m_env.m_scb.hit_count;
-      base_real_eops = m_env.m_scb.real_eop_count;
-      base_headers   = m_env.m_scb.header_count;
-      send_long_frame(16'h0041, 48'hA1B2C3D4E5F6);
-      wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 32, case_id);
+      send_clean_recovery_frame(8'h02, 16'h0041, 48'hA1B2C3D4E5F6, "none", case_id);
       hit_obs = find_last_obs(FRCV_OBS_HIT);
       if (hit_obs == null || hit_obs.hit_sop !== 1'b1 || hit_obs.hit_eop !== 1'b1)
         `uvm_fatal("FRCV_CASE", "One-hit long frame must emit SOP and EOP on the same beat")
+    endtask
+
+    task automatic do_single_bad_crc_case(bit [7:0] channel,
+                                          int unsigned frame_number,
+                                          bit short_mode,
+                                          bit expect_crc_error_pulse = 1'b0);
+      int unsigned base_hits;
+      int unsigned base_real_eops;
+      int unsigned base_headers;
+      bit [31:0]   csr_data;
+      int unsigned wait_cycles_left;
+      bit          saw_crc_error_pulse;
+      bit          pulse_valid_v;
+      bit          pulse_eop_v;
+
+      wait_for_reset_release();
+      run_start_for_mode();
+      base_hits      = m_env.m_scb.hit_count;
+      base_real_eops = m_env.m_scb.real_eop_count;
+      base_headers   = m_env.m_scb.header_count;
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+        random_doc_case(), short_mode, 1, 1, 1, 1, 1, 1'b0, 1'b0, 1'b0, 1'b0, "none", 32);
+      if (expect_crc_error_pulse) begin
+        saw_crc_error_pulse = 1'b0;
+        pulse_valid_v = 1'b0;
+        pulse_eop_v   = 1'b0;
+        wait_cycles_left = 64;
+        fork
+          begin
+            send_doc_frame(frame_number, 1, short_mode, channel, 1'b1);
+            wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 48, case_id);
+          end
+          begin
+            while (wait_cycles_left != 0) begin
+              @(posedge out_vif.clk);
+              if (out_vif.hit_error[1] === 1'b1) begin
+                saw_crc_error_pulse = 1'b1;
+                pulse_valid_v = out_vif.hit_valid;
+                pulse_eop_v   = out_vif.hit_eop;
+                break;
+              end
+              wait_cycles_left--;
+            end
+          end
+        join
+        if (!saw_crc_error_pulse)
+          `uvm_fatal("FRCV_CASE",
+            $sformatf("%s expected a crc_error sideband pulse while the bad frame retired", case_id))
+        if (pulse_valid_v !== 1'b0 || pulse_eop_v !== 1'b0)
+          `uvm_fatal("FRCV_CASE",
+            $sformatf("%s expected crc_error pulse off the valid/eop beat, saw valid=%0b eop=%0b",
+              case_id, pulse_valid_v, pulse_eop_v))
+        wait_cycles(8);
+      end else begin
+        send_doc_frame(frame_number, 1, short_mode, channel, 1'b1);
+        wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 48, case_id);
+        wait_cycles(24);
+      end
+      csr_read(8'h01, csr_data);
+      if (csr_data != 32'd1)
+        `uvm_fatal("FRCV_CASE",
+          $sformatf("%s expected crc counter readback 1 got %0d", case_id, csr_data))
+    endtask
+
+    task automatic do_b080_short_crc_counter_accumulates(bit [7:0] channel);
+      int unsigned base_hits;
+      int unsigned base_real_eops;
+      int unsigned base_headers;
+      bit [31:0]   base_crc_counter;
+      bit [31:0]   csr_data;
+
+      wait_for_reset_release();
+      run_start_for_mode();
+      csr_read(8'h01, base_crc_counter);
+      base_hits      = m_env.m_scb.hit_count;
+      base_real_eops = m_env.m_scb.real_eop_count;
+      base_headers   = m_env.m_scb.header_count;
+
+      for (int unsigned iter = 0; iter < 2; iter++) begin
+        scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+          random_doc_case(), 1'b1, 1, 1, 1, 1, 1, 1'b0, 1'b0, 1'b0, 1'b0, "none", 32);
+        send_doc_frame(16'h0080 + iter, 1, 1'b1, channel, 1'b1);
+        wait_for_counts(base_hits + iter + 1, base_real_eops + iter + 1, base_headers + iter + 1, 64, case_id);
+        wait_cycles(8);
+      end
+
+      wait_cycles(24);
+      csr_read(8'h01, csr_data);
+      if (csr_data != (base_crc_counter + 32'd2))
+        `uvm_fatal("FRCV_CASE",
+          $sformatf("%s expected crc counter %0d got %0d",
+            case_id, base_crc_counter + 32'd2, csr_data))
+    endtask
+
+    task automatic do_b112_long_good_frames_leave_crc_counter_stable(bit [7:0] channel);
+      int unsigned base_hits;
+      int unsigned base_real_eops;
+      int unsigned base_headers;
+      bit [31:0]   base_crc_counter;
+      bit [31:0]   csr_data;
+
+      wait_for_reset_release();
+      run_start_for_mode();
+      csr_read(8'h01, base_crc_counter);
+      base_hits      = m_env.m_scb.hit_count;
+      base_real_eops = m_env.m_scb.real_eop_count;
+      base_headers   = m_env.m_scb.header_count;
+
+      for (int unsigned iter = 0; iter < 4; iter++) begin
+        scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+          random_doc_case(), 1'b0, 1, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "none", 32);
+        send_doc_frame(16'h1120 + iter, 1, 1'b0, channel, 1'b0);
+        wait_for_counts(base_hits + iter + 1, base_real_eops + iter + 1, base_headers + iter + 1, 64, case_id);
+        wait_cycles(8);
+      end
+
+      wait_cycles(24);
+      csr_read(8'h01, csr_data);
+      if (csr_data != base_crc_counter)
+        `uvm_fatal("FRCV_CASE",
+          $sformatf("%s expected crc counter to remain %0d got %0d",
+            case_id, base_crc_counter, csr_data))
+    endtask
+
+    task automatic do_b113_bad_frames_accumulate_crc_counter(bit [7:0] channel);
+      int unsigned base_hits;
+      int unsigned base_real_eops;
+      int unsigned base_headers;
+      bit [31:0]   base_crc_counter;
+      bit [31:0]   csr_data;
+      bit          short_mode_v;
+
+      wait_for_reset_release();
+      run_start_for_mode();
+      csr_read(8'h01, base_crc_counter);
+      base_hits      = m_env.m_scb.hit_count;
+      base_real_eops = m_env.m_scb.real_eop_count;
+      base_headers   = m_env.m_scb.header_count;
+
+      for (int unsigned iter = 0; iter < 4; iter++) begin
+        short_mode_v = iter[0];
+        scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+          random_doc_case(), short_mode_v, 1, 1, 1, 1, 1, 1'b0, 1'b0, 1'b0, 1'b0, "none", 32);
+        send_doc_frame(16'h1130 + iter, 1, short_mode_v, channel, 1'b1);
+        wait_for_counts(base_hits + iter + 1, base_real_eops + iter + 1, base_headers + iter + 1, 64, case_id);
+        wait_cycles(8);
+      end
+
+      wait_cycles(24);
+      csr_read(8'h01, csr_data);
+      if (csr_data != (base_crc_counter + 32'd4))
+        `uvm_fatal("FRCV_CASE",
+          $sformatf("%s expected crc counter %0d got %0d",
+            case_id, base_crc_counter + 32'd4, csr_data))
+    endtask
+
+    task automatic do_b114_mixed_good_bad_crc_count_matches_bad_frames(bit [7:0] channel);
+      int unsigned base_hits;
+      int unsigned base_real_eops;
+      int unsigned base_headers;
+      bit [31:0]   base_crc_counter;
+      bit [31:0]   csr_data;
+
+      wait_for_reset_release();
+      run_start_for_mode();
+      csr_read(8'h01, base_crc_counter);
+      base_hits      = m_env.m_scb.hit_count;
+      base_real_eops = m_env.m_scb.real_eop_count;
+      base_headers   = m_env.m_scb.header_count;
+
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+        random_doc_case(), 1'b0, 1, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "none", 32);
+      send_doc_frame(16'h1140, 1, 1'b0, channel, 1'b0);
+      wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 64, case_id);
+      wait_cycles(8);
+
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+        random_doc_case(), 1'b0, 1, 1, 1, 1, 1, 1'b0, 1'b0, 1'b0, 1'b0, "none", 32);
+      send_doc_frame(16'h1141, 1, 1'b0, channel, 1'b1);
+      wait_for_counts(base_hits + 2, base_real_eops + 2, base_headers + 2, 64, case_id);
+      wait_cycles(8);
+
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+        random_doc_case(), 1'b1, 1, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "none", 32);
+      send_doc_frame(16'h1142, 1, 1'b1, channel, 1'b0);
+      wait_for_counts(base_hits + 3, base_real_eops + 3, base_headers + 3, 64, case_id);
+      wait_cycles(8);
+
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+        random_doc_case(), 1'b1, 1, 1, 1, 1, 1, 1'b0, 1'b0, 1'b0, 1'b0, "none", 32);
+      send_doc_frame(16'h1143, 1, 1'b1, channel, 1'b1);
+      wait_for_counts(base_hits + 4, base_real_eops + 4, base_headers + 4, 64, case_id);
+      wait_cycles(24);
+      csr_read(8'h01, csr_data);
+      if (csr_data != (base_crc_counter + 32'd2))
+        `uvm_fatal("FRCV_CASE",
+          $sformatf("%s expected crc counter %0d got %0d",
+            case_id, base_crc_counter + 32'd2, csr_data))
     endtask
 
     task automatic do_e019_fs_idle_accepts_header_even_if_asi_rx8b1k_valid_low();
@@ -466,6 +679,269 @@
         random_doc_case(), 1'b0, 1, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, stop_boundary, 6);
       send_long_frame(frame_number, hit_word);
       wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 32, ctx);
+    endtask
+
+    task automatic read_dbg_run_decode(
+      output bit receiver_go_v,
+      output bit receiver_force_go_v
+    );
+      uvm_hdl_data_t raw;
+
+      if (!uvm_hdl_read("tb_top.dbg_receiver_go", raw))
+        `uvm_fatal("FRCV_CASE", "Failed to read tb_top.dbg_receiver_go")
+      receiver_go_v = raw[0];
+
+      if (!uvm_hdl_read("tb_top.dbg_receiver_force_go", raw))
+        `uvm_fatal("FRCV_CASE", "Failed to read tb_top.dbg_receiver_force_go")
+      receiver_force_go_v = raw[0];
+    endtask
+
+    task automatic read_dbg_csr_word0(
+      output bit [7:0] control_v,
+      output bit [7:0] status_v
+    );
+      uvm_hdl_data_t raw;
+
+      if (!uvm_hdl_read("tb_top.dbg_csr_control", raw))
+        `uvm_fatal("FRCV_CASE", "Failed to read tb_top.dbg_csr_control")
+      control_v = raw[7:0];
+
+      if (!uvm_hdl_read("tb_top.dbg_csr_status", raw))
+        `uvm_fatal("FRCV_CASE", "Failed to read tb_top.dbg_csr_status")
+      status_v = raw[7:0];
+    endtask
+
+    task automatic expect_dbg_run_decode(bit exp_go, bit exp_force, string ctx);
+      bit receiver_go_v;
+      bit receiver_force_go_v;
+
+      wait_cycles(2);
+      read_dbg_run_decode(receiver_go_v, receiver_force_go_v);
+      if (receiver_go_v !== exp_go || receiver_force_go_v !== exp_force)
+        `uvm_fatal(
+          "FRCV_CASE",
+          $sformatf(
+            "%s expected receiver_go/force_go=%0b/%0b got %0b/%0b",
+            ctx, exp_go, exp_force, receiver_go_v, receiver_force_go_v
+          )
+        )
+    endtask
+
+    task automatic run_basic_explicit_doc_case(bit [7:0] channel);
+      int unsigned base_hits;
+      int unsigned base_real_eops;
+      int unsigned base_headers;
+      int unsigned base_endofruns;
+      bit [31:0]   csr_data;
+      frcv_csr_obs_item csr_obs;
+
+      wait_for_reset_release();
+
+      unique case (case_id)
+        "B001_reset_idle_outputs_quiet": begin
+          do_b001_reset_idle_outputs_quiet();
+        end
+        "B002_idle_force_go_monitor_path_open": begin
+          send_ctrl(CTRL_IDLE, "IDLE");
+          attempt_frame_expect_blocked(channel, 16'h0002, 48'h020304050607, case_id);
+        end
+        "B003_idle_force_go_ignores_csr_mask": begin
+          send_ctrl(CTRL_IDLE, "IDLE");
+          csr_write(8'h00, 32'h0000_0000);
+          wait_cycles(2);
+          attempt_frame_expect_blocked(channel, 16'h0003, 48'h030405060708, case_id);
+        end
+        "B004_running_needs_csr_enable_high": begin
+          do_b004_running_needs_csr_enable_high();
+        end
+        "B005_running_mask_low_blocks_header_start": begin
+          do_b005_running_mask_low_blocks_header_start();
+        end
+        "B006_run_prepare_clears_parser_state": begin
+          do_b006_run_prepare_clears_parser_state();
+        end
+        "B007_sync_keeps_parser_closed": begin
+          send_ctrl(CTRL_SYNC, "SYNC");
+          attempt_frame_expect_blocked(channel, 16'h0007, 48'h0708090a0b0c, case_id);
+        end
+        "B008_running_opens_header_detection": begin
+          run_start_for_mode();
+          send_clean_recovery_frame(channel, 16'h0008, 48'h08090a0b0c0d, "none", case_id);
+        end
+        "B009_terminating_blocks_new_header_from_idle": begin
+          do_b009_terminating_blocks_new_header_from_idle();
+        end
+        "B010_terminating_allows_open_frame_to_finish": begin
+          do_b010_terminating_allows_open_frame_to_finish();
+        end
+        "B011_ctrl_unknown_word_enters_error": begin
+          do_b011_ctrl_unknown_word_enters_error();
+        end
+        "B012_ctrl_ready_high_with_valid": begin
+          pulse_ctrl(CTRL_RUNNING, "RUNNING");
+          ensure_ctrl_ready_high(4, case_id);
+        end
+        "B013_ctrl_ready_high_without_valid": begin
+          ensure_ctrl_ready_high(4, case_id);
+        end
+        "B014_ctrl_decode_idle_force_go": begin
+          pulse_ctrl(CTRL_IDLE, "IDLE");
+          expect_dbg_run_decode(1'b0, 1'b0, case_id);
+        end
+        "B015_ctrl_decode_run_prepare_disable": begin
+          pulse_ctrl(CTRL_RUN_PREPARE, "RUN_PREPARE");
+          expect_dbg_run_decode(1'b0, 1'b0, case_id);
+        end
+        "B016_ctrl_decode_sync_disable": begin
+          pulse_ctrl(CTRL_SYNC, "SYNC");
+          expect_dbg_run_decode(1'b0, 1'b0, case_id);
+        end
+        "B017_ctrl_decode_running_go": begin
+          pulse_ctrl(CTRL_RUNNING, "RUNNING");
+          expect_dbg_run_decode(1'b1, 1'b0, case_id);
+        end
+        "B018_ctrl_decode_terminating_stop_new_headers": begin
+          pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
+          expect_dbg_run_decode(1'b0, 1'b0, case_id);
+        end
+        "B019_ctrl_decode_link_test_disable": begin
+          pulse_ctrl(CTRL_LINK_TEST, "LINK_TEST");
+          expect_dbg_run_decode(1'b0, 1'b0, case_id);
+        end
+        "B020_ctrl_decode_sync_test_disable": begin
+          pulse_ctrl(CTRL_SYNC_TEST, "SYNC_TEST");
+          expect_dbg_run_decode(1'b0, 1'b0, case_id);
+        end
+        "B021_ctrl_decode_reset_disable": begin
+          pulse_ctrl(CTRL_RESET, "RESET");
+          expect_dbg_run_decode(1'b0, 1'b0, case_id);
+        end
+        "B022_ctrl_decode_out_of_daq_disable": begin
+          pulse_ctrl(CTRL_OUT_OF_DAQ, "OUT_OF_DAQ");
+          expect_dbg_run_decode(1'b0, 1'b0, case_id);
+        end
+        "B023_csr_control_default_enable": begin
+          csr_read(8'h00, csr_data);
+          if (csr_data[7:0] != 8'h01)
+            `uvm_fatal("FRCV_CASE", $sformatf("%s expected csr.control=0x01 got 0x%02h", case_id, csr_data[7:0]))
+        end
+        "B024_csr_control_write_zero_masks_running": begin
+          run_start_for_mode();
+          csr_write(8'h00, 32'h0000_0000);
+          wait_cycles(2);
+          attempt_frame_expect_blocked(channel, 16'h0024, 48'h240102030405, case_id);
+        end
+        "B025_csr_control_write_one_unmasks_running": begin
+          run_start_for_mode();
+          csr_write(8'h00, 32'h0000_0000);
+          csr_write(8'h00, 32'h0000_0001);
+          wait_cycles(2);
+          send_clean_recovery_frame(channel, 16'h0025, 48'h250102030405, "none", case_id);
+        end
+        "B026_csr_read_addr0_control_status": begin
+          csr_read(8'h00, csr_data);
+          if (csr_data[7:0] != 8'h01 || csr_data[31:24] != 8'h00)
+            `uvm_fatal(
+              "FRCV_CASE",
+              $sformatf("%s expected csr word0 control/status = 0x01/0x00 got 0x%02h/0x%02h",
+                case_id, csr_data[7:0], csr_data[31:24])
+            )
+        end
+        "B027_csr_read_addr1_crc_counter": begin
+          do_single_bad_crc_case(channel, 16'h0027, 1'b0, 1'b0);
+        end
+        "B029_csr_read_unused_word_zero": begin
+          csr_read(8'hff, csr_data);
+          if (csr_data != 32'd0)
+            `uvm_fatal("FRCV_CASE", $sformatf("%s expected unused csr word to read 0 got 0x%08h", case_id, csr_data))
+        end
+        "B031_csr_waitrequest_low_on_read": begin
+          csr_read(8'h00, csr_data);
+          csr_obs = find_last_csr_obs();
+          if (csr_obs == null || csr_obs.waitrequest !== 1'b0)
+            `uvm_fatal("FRCV_CASE", $sformatf("%s expected serviced read with waitrequest low", case_id))
+        end
+        "B032_csr_waitrequest_low_on_write": begin
+          csr_write(8'h00, 32'h0000_0001);
+          csr_obs = find_last_csr_obs();
+          if (csr_obs == null || !csr_obs.is_write || csr_obs.waitrequest !== 1'b0)
+            `uvm_fatal("FRCV_CASE", $sformatf("%s expected serviced write with waitrequest low", case_id))
+        end
+        "B033_csr_waitrequest_high_when_idle": begin
+          wait_cycles(2);
+          if (csr_vif.waitrequest !== 1'b1)
+            `uvm_fatal("FRCV_CASE", $sformatf("%s expected idle waitrequest high, got %b", case_id, csr_vif.waitrequest))
+        end
+        "B034_csr_reserved_control_bits_roundtrip": begin
+          bit [7:0] dbg_control_v;
+          bit [7:0] dbg_status_v;
+
+          csr_write(8'h00, 32'h0000_00A5);
+          wait_cycles(2);
+          read_dbg_csr_word0(dbg_control_v, dbg_status_v);
+          if (dbg_control_v != 8'hA5)
+            `uvm_fatal(
+              "FRCV_CASE",
+              $sformatf(
+                "%s expected internal control image 0xA5 got 0x%02h (status=0x%02h)",
+                case_id, dbg_control_v, dbg_status_v
+              )
+            )
+          csr_read(8'h00, csr_data);
+          if (csr_data[7:0] != 8'hA5)
+            `uvm_fatal(
+              "FRCV_CASE",
+              $sformatf(
+                "%s expected control roundtrip 0xA5 got 0x%02h (dbg_control=0x%02h dbg_status=0x%02h)",
+                case_id, csr_data[7:0], dbg_control_v, dbg_status_v
+              )
+            )
+        end
+        "B036_data_byte_without_kchar_no_start": begin
+          do_b036_data_byte_without_kchar_no_start();
+        end
+        "B039_long_zero_hit_frame_headerinfo_pulse": begin
+          do_b039_long_zero_hit_frame_headerinfo_pulse();
+        end
+        "B041_long_one_hit_sop_and_eop_same_transfer": begin
+          do_b041_long_one_hit_sop_and_eop_same_transfer();
+        end
+        "B059_long_crc_bad_raises_error1_on_eop": begin
+          do_single_bad_crc_case(channel, 16'h0059, 1'b0, 1'b1);
+        end
+        "B060_long_crc_bad_increments_crc_counter": begin
+          do_single_bad_crc_case(channel, 16'h0060, 1'b0, 1'b0);
+        end
+        "B079_short_crc_bad_raises_error1_on_last_hit": begin
+          do_single_bad_crc_case(channel, 16'h0079, 1'b1, 1'b1);
+        end
+        "B080_short_crc_counter_accumulates": begin
+          do_b080_short_crc_counter_accumulates(channel);
+        end
+        "B112_long_good_frames_leave_crc_counter_stable": begin
+          do_b112_long_good_frames_leave_crc_counter_stable(channel);
+        end
+        "B113_bad_frames_accumulate_crc_counter": begin
+          do_b113_bad_frames_accumulate_crc_counter(channel);
+        end
+        "B114_mixed_good_bad_crc_count_matches_bad_frames": begin
+          do_b114_mixed_good_bad_crc_count_matches_bad_frames(channel);
+        end
+        "B098_idle_monitoring_accepts_header_without_running": begin
+          send_ctrl(CTRL_IDLE, "IDLE");
+          attempt_frame_expect_blocked(channel, 16'h0098, 48'h980102030405, case_id);
+        end
+        "B099_idle_monitoring_still_ignores_csr_zero": begin
+          send_ctrl(CTRL_IDLE, "IDLE");
+          csr_write(8'h00, 32'h0000_0000);
+          wait_cycles(2);
+          attempt_frame_expect_blocked(channel, 16'h0099, 48'h990102030405, case_id);
+        end
+        default: begin
+          `uvm_fatal("FRCV_CASE_UNIMPLEMENTED",
+            $sformatf("Missing explicit BASIC case handler for %s", case_id))
+        end
+      endcase
     endtask
 
     task automatic run_random_illegal_ctrl_set(bit [7:0] channel,
@@ -658,6 +1134,17 @@
       end
     endtask
 
+    task automatic send_doc_crc_bytes(
+      bit [7:0]    channel,
+      bit          crc_hi_is_k,
+      byte unsigned crc_hi,
+      bit          crc_lo_is_k,
+      byte unsigned crc_lo
+    );
+      drive_symbol(crc_hi_is_k, crc_hi, '0, channel);
+      drive_symbol(crc_lo_is_k, crc_lo, '0, channel);
+    endtask
+
     task automatic run_error_malformed_case(bit [7:0] channel);
       int unsigned base_hits;
       int unsigned base_real_eops;
@@ -713,6 +1200,44 @@
           send_doc_payload_prefix(frame_number, frame_len, 1'b0, channel, 3);
           expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 0, 0, 1, 0, 16, case_id);
         end
+        "X034_long_bad_trailer_symbol_replaced_with_data": begin
+          frame_len = 1;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+            random_doc_case(), 1'b0, frame_len, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "bad_trailer", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b0, channel, 4);
+          send_doc_payload_prefix(frame_number, frame_len, 1'b0, channel, payload_byte_count(1'b0, frame_len));
+          send_doc_crc_bytes(channel, 1'b1, 8'h9c, 1'b0, 8'h00);
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 1, 1, 1, 0, 20, case_id);
+        end
+        "X035_long_extra_payload_after_declared_len": begin
+          frame_len = 1;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+            random_doc_case(), 1'b0, frame_len, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "extra_payload", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b0, channel, 4);
+          send_doc_payload_prefix(frame_number, frame_len, 1'b0, channel, payload_byte_count(1'b0, frame_len));
+          send_doc_crc_bytes(
+            channel,
+            1'b0,
+            payload_byte_value(frame_number, payload_byte_count(1'b0, frame_len), 1'b0),
+            1'b0,
+            payload_byte_value(frame_number, payload_byte_count(1'b0, frame_len) + 1, 1'b0)
+          );
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 1, 1, 1, 0, 20, case_id);
+        end
+        "X036_long_new_header_inside_payload": begin
+          frame_len = 2;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+            random_doc_case(), 1'b0, frame_len, 2, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "nested_header", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b0, channel, 4);
+          for (int unsigned idx = 0; idx < payload_byte_count(1'b0, frame_len); idx++) begin
+            if (idx == 5)
+              drive_symbol(1'b1, HEADER_BYTE, '0, channel);
+            else
+              drive_symbol(1'b0, payload_byte_value(frame_number, idx, 1'b0), '0, channel);
+          end
+          send_doc_crc_bytes(channel, 1'b0, 8'h00, 1'b0, 8'h00);
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 2, 1, 1, 0, 24, case_id);
+        end
         "X037_long_comma_inside_payload_mode0": begin
           frame_len = 2;
           scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b0,
@@ -727,6 +1252,90 @@
             random_doc_case(), 1'b0, frame_len, 0, 1, 0, 0, 1'b0, 1'b0, 1'b0, 1'b0, "truncated", 6);
           send_doc_header_prefix(frame_number, frame_len, 1'b0, channel, 4);
           send_doc_payload_prefix(frame_number, frame_len, 1'b0, channel, payload_byte_count(1'b0, frame_len), 1'b1);
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 0, 0, 1, 0, 16, case_id);
+        end
+        "X040_short_header_only_no_counters": begin
+          drive_symbol(1'b1, HEADER_BYTE, '0, channel);
+          expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 12, case_id);
+        end
+        "X041_short_missing_frame_number_byte1": begin
+          send_doc_header_prefix(frame_number, 1, 1'b1, channel, 1);
+          expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 12, case_id);
+        end
+        "X042_short_missing_event_counter_msb": begin
+          send_doc_header_prefix(frame_number, 1, 1'b1, channel, 2);
+          expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 12, case_id);
+        end
+        "X043_short_missing_event_counter_lsb": begin
+          send_doc_header_prefix(frame_number, 1, 1'b1, channel, 3);
+          expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 12, case_id);
+        end
+        "X044_short_declared_len1_missing_payload": begin
+          frame_len = 1;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b0,
+            random_doc_case(), 1'b1, frame_len, 0, 1, 0, 0, 1'b0, 1'b0, 1'b0, 1'b0, "truncated", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b1, channel, 4);
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 0, 0, 1, 0, 12, case_id);
+        end
+        "X047_short_declared_len_large_cut_midpayload": begin
+          frame_len = 8;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b0,
+            random_doc_case(), 1'b1, frame_len, 0, 1, 0, 0, 1'b0, 1'b0, 1'b0, 1'b0, "truncated", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b1, channel, 4);
+          send_doc_payload_prefix(frame_number, frame_len, 1'b1, channel, 3);
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 0, 0, 1, 0, 16, case_id);
+        end
+        "X048_short_new_header_inside_payload": begin
+          frame_len = 3;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+            random_doc_case(), 1'b1, frame_len, 3, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "nested_header", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b1, channel, 4);
+          for (int unsigned idx = 0; idx < payload_byte_count(1'b1, frame_len); idx++) begin
+            if (idx == 5)
+              drive_symbol(1'b1, HEADER_BYTE, '0, channel);
+            else
+              drive_symbol(1'b0, payload_byte_value(frame_number, idx, 1'b1), '0, channel);
+          end
+          send_doc_crc_bytes(channel, 1'b0, 8'h00, 1'b0, 8'h00);
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 3, 1, 1, 0, 28, case_id);
+        end
+        "X049_short_extra_payload_after_declared_len": begin
+          frame_len = 1;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+            random_doc_case(), 1'b1, frame_len, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "extra_payload", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b1, channel, 4);
+          send_doc_payload_prefix(frame_number, frame_len, 1'b1, channel, payload_byte_count(1'b1, frame_len));
+          send_doc_crc_bytes(
+            channel,
+            1'b0,
+            payload_byte_value(frame_number, payload_byte_count(1'b1, frame_len), 1'b1),
+            1'b0,
+            payload_byte_value(frame_number, payload_byte_count(1'b1, frame_len) + 1, 1'b1)
+          );
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 1, 1, 1, 0, 20, case_id);
+        end
+        "X050_short_comma_inside_payload_mode0": begin
+          frame_len = 2;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b0,
+            random_doc_case(), 1'b1, frame_len, 0, 1, 0, 0, 1'b0, 1'b0, 1'b0, 1'b0, "mode0_abort", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b1, channel, 4);
+          send_doc_payload_prefix(frame_number, frame_len, 1'b1, channel, 2, 1'b0, 1);
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 0, 0, 1, 0, 16, case_id);
+        end
+        "X051_short_comma_inside_payload_mode1": begin
+          frame_len = 2;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b0,
+            random_doc_case(), 1'b1, frame_len, 0, 1, 0, 0, 1'b0, 1'b0, 1'b0, 1'b0, "mode0_abort", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b1, channel, 4);
+          send_doc_payload_prefix(frame_number, frame_len, 1'b1, channel, 2, 1'b0, 1);
+          expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 0, 0, 1, 0, 16, case_id);
+        end
+        "X052_short_valid_low_entire_malformed_frame": begin
+          frame_len = 1;
+          scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b0,
+            random_doc_case(), 1'b1, frame_len, 0, 1, 0, 0, 1'b0, 1'b0, 1'b0, 1'b0, "truncated", 6);
+          send_doc_header_prefix(frame_number, frame_len, 1'b1, channel, 4);
+          send_doc_payload_prefix(frame_number, frame_len, 1'b1, channel, payload_byte_count(1'b1, frame_len), 1'b1);
           expect_activity_delta(base_hits, base_real_eops, base_headers, base_endofruns, 0, 0, 1, 0, 16, case_id);
         end
         default: begin
@@ -897,7 +1506,18 @@
       end
     endtask
 
+    task automatic pulse_ctrl_async(logic [8:0] cmd, string state_name);
+      fork
+        begin
+          automatic logic [8:0] async_cmd = cmd;
+          automatic string      async_state = state_name;
+          pulse_ctrl(async_cmd, async_state);
+        end
+      join_none
+    endtask
+
     task automatic run_start_for_mode();
+      csr_write(8'h00, 32'h0000_0001);
       issue_ctrl_for_mode(CTRL_RUN_PREPARE, "RUN_PREPARE");
       issue_ctrl_for_mode(CTRL_SYNC, "SYNC");
       issue_ctrl_for_mode(CTRL_RUNNING, "RUNNING");
@@ -1078,8 +1698,19 @@
       int unsigned payload_bytes;
       bit [2:0]    err_bits;
       byte unsigned payload_byte;
+      byte unsigned frame_bytes[$];
+      bit [15:0]    crc_trailer;
 
       payload_bytes = payload_byte_count(short_mode, frame_len);
+      frame_bytes.push_back(byte'(frame_number[15:8]));
+      frame_bytes.push_back(byte'(frame_number[7:0]));
+      frame_bytes.push_back(frame_len_msb_byte(short_mode, frame_len));
+      frame_bytes.push_back(byte'(frame_len[7:0]));
+      for (int unsigned idx = 0; idx < payload_bytes; idx++)
+        frame_bytes.push_back(payload_byte_value(frame_number, idx, short_mode));
+      crc_trailer = frcv_crc16_trailer(frame_bytes);
+      if (inject_bad_crc)
+        crc_trailer ^= 16'h0001;
 
       drive_symbol(1'b1, HEADER_BYTE, '0, channel);
       drive_symbol(1'b0, byte'(frame_number[15:8]), '0, channel);
@@ -1089,7 +1720,7 @@
 
       for (int unsigned idx = 0; idx < payload_bytes; idx++) begin
         if (terminate_after_bytes != 32'hffff_ffff && idx == terminate_after_bytes)
-          pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
+          pulse_ctrl_async(CTRL_TERMINATING, "TERMINATING");
 
         if (truncate_after_bytes != 32'hffff_ffff && idx >= truncate_after_bytes) begin
           wait_cycles(2);
@@ -1116,8 +1747,8 @@
         drive_symbol(1'b0, payload_byte, err_bits, channel);
       end
 
-      drive_symbol(1'b0, inject_bad_crc ? byte'(frame_number[7:0] ^ 8'h5a) : 8'h00, '0, channel);
-      drive_symbol(1'b0, inject_bad_crc ? byte'(frame_number[15:8] ^ 8'ha5) : 8'h00, '0, channel);
+      drive_symbol(1'b0, byte'(crc_trailer[15:8]), '0, channel);
+      drive_symbol(1'b0, byte'(crc_trailer[7:0]), '0, channel);
     endtask
 
     task automatic send_doc_frame_body(
@@ -1137,16 +1768,28 @@
       int unsigned payload_bytes;
       bit [2:0]    err_bits;
       byte unsigned payload_byte;
+      byte unsigned frame_bytes[$];
+      bit [15:0]    crc_trailer;
+
+      frame_bytes.push_back(byte'(frame_number[15:8]));
+      frame_bytes.push_back(byte'(frame_number[7:0]));
+      frame_bytes.push_back(frame_len_msb_byte(short_mode, frame_len));
+      frame_bytes.push_back(byte'(frame_len[7:0]));
+
+      payload_bytes = payload_byte_count(short_mode, frame_len);
+      for (int unsigned idx = 0; idx < payload_bytes; idx++)
+        frame_bytes.push_back(payload_byte_value(frame_number, idx, short_mode));
+      crc_trailer = frcv_crc16_trailer(frame_bytes);
+      if (inject_bad_crc)
+        crc_trailer ^= 16'h0001;
 
       drive_symbol(1'b0, byte'(frame_number[15:8]), '0, channel);
       drive_symbol(1'b0, byte'(frame_number[7:0]), '0, channel);
       drive_symbol(1'b0, frame_len_msb_byte(short_mode, frame_len), '0, channel);
       drive_symbol(1'b0, byte'(frame_len[7:0]), '0, channel);
-
-      payload_bytes = payload_byte_count(short_mode, frame_len);
       for (int unsigned idx = 0; idx < payload_bytes; idx++) begin
         if (terminate_after_bytes != 32'hffff_ffff && idx == terminate_after_bytes)
-          pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
+          pulse_ctrl_async(CTRL_TERMINATING, "TERMINATING");
 
         if (truncate_after_bytes != 32'hffff_ffff && idx >= truncate_after_bytes) begin
           wait_cycles(2);
@@ -1173,8 +1816,8 @@
         drive_symbol(1'b0, payload_byte, err_bits, channel);
       end
 
-      drive_symbol(1'b0, inject_bad_crc ? byte'(frame_number[7:0] ^ 8'h5a) : 8'h00, '0, channel);
-      drive_symbol(1'b0, inject_bad_crc ? byte'(frame_number[15:8] ^ 8'ha5) : 8'h00, '0, channel);
+      drive_symbol(1'b0, byte'(crc_trailer[15:8]), '0, channel);
+      drive_symbol(1'b0, byte'(crc_trailer[7:0]), '0, channel);
     endtask
 
     task automatic drive_symbol_and_maybe_reset(
@@ -1212,10 +1855,21 @@
       bit [2:0]    err_bits;
       byte unsigned payload_byte;
       bit          did_reset;
+      byte unsigned frame_bytes[$];
+      bit [15:0]    crc_trailer;
 
       payload_bytes = payload_byte_count(short_mode, frame_len);
       symbol_idx = 0;
       did_reset = 1'b0;
+      frame_bytes.push_back(byte'(frame_number[15:8]));
+      frame_bytes.push_back(byte'(frame_number[7:0]));
+      frame_bytes.push_back(frame_len_msb_byte(short_mode, frame_len));
+      frame_bytes.push_back(byte'(frame_len[7:0]));
+      for (int unsigned idx = 0; idx < payload_bytes; idx++)
+        frame_bytes.push_back(payload_byte_value(frame_number, idx, short_mode));
+      crc_trailer = frcv_crc16_trailer(frame_bytes);
+      if (inject_bad_crc)
+        crc_trailer ^= 16'h0001;
 
       drive_symbol_and_maybe_reset(1'b1, HEADER_BYTE, '0, channel, symbol_idx, reset_after_symbol_idx, did_reset);
       drive_symbol_and_maybe_reset(1'b0, byte'(frame_number[15:8]), '0, channel, symbol_idx, reset_after_symbol_idx, did_reset);
@@ -1239,11 +1893,11 @@
           return;
       end
 
-      drive_symbol_and_maybe_reset(1'b0, inject_bad_crc ? byte'(frame_number[7:0] ^ 8'h5a) : 8'h00,
+      drive_symbol_and_maybe_reset(1'b0, byte'(crc_trailer[15:8]),
         '0, channel, symbol_idx, reset_after_symbol_idx, did_reset);
       if (did_reset)
         return;
-      drive_symbol_and_maybe_reset(1'b0, inject_bad_crc ? byte'(frame_number[15:8] ^ 8'ha5) : 8'h00,
+      drive_symbol_and_maybe_reset(1'b0, byte'(crc_trailer[7:0]),
         '0, channel, symbol_idx, reset_after_symbol_idx, did_reset);
     endtask
 
@@ -1634,9 +2288,43 @@
       end
     endtask
 
+    function automatic int unsigned expected_hits_before_loss_sync(
+      bit          short_mode,
+      int unsigned frame_len,
+      int unsigned first_bad_payload_idx
+    );
+      int unsigned completed_hits;
+      int unsigned payload_idx;
+
+      if (frame_len == 0)
+        return 0;
+      if (first_bad_payload_idx == 32'hffff_ffff)
+        return frame_len;
+
+      completed_hits = 0;
+      payload_idx    = 0;
+      while (completed_hits < frame_len) begin
+        if (!short_mode) begin
+          payload_idx += 6;
+        end else if (completed_hits[0] == 1'b0) begin
+          payload_idx += 4;
+        end else begin
+          payload_idx += 3;
+        end
+
+        if ((payload_idx - 1) >= first_bad_payload_idx)
+          return completed_hits;
+        completed_hits++;
+      end
+
+      return completed_hits;
+    endfunction
+
     function automatic int unsigned expected_hits_for_frame(
+      bit          short_mode,
       int unsigned frame_len,
       int unsigned truncate_after_bytes,
+      bit          inject_loss_sync,
       bit inject_comma,
       bit mode_halt_abort
     );
@@ -1646,6 +2334,8 @@
         return 0;
       if (inject_comma && mode_halt_abort)
         return 0;
+      if (inject_loss_sync)
+        return expected_hits_before_loss_sync(short_mode, frame_len, payload_byte_count(short_mode, frame_len) / 2);
       return frame_len;
     endfunction
 
@@ -1728,6 +2418,57 @@
 
       if (contains_ci("reset")) begin
         run_reset_doc_case(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
+        scb_case_end(case_id);
+        return;
+      end
+
+      if (case_id == "B001_reset_idle_outputs_quiet" ||
+          case_id == "B002_idle_force_go_monitor_path_open" ||
+          case_id == "B003_idle_force_go_ignores_csr_mask" ||
+          case_id == "B004_running_needs_csr_enable_high" ||
+          case_id == "B005_running_mask_low_blocks_header_start" ||
+          case_id == "B006_run_prepare_clears_parser_state" ||
+          case_id == "B007_sync_keeps_parser_closed" ||
+          case_id == "B008_running_opens_header_detection" ||
+          case_id == "B009_terminating_blocks_new_header_from_idle" ||
+          case_id == "B010_terminating_allows_open_frame_to_finish" ||
+          case_id == "B011_ctrl_unknown_word_enters_error" ||
+          case_id == "B012_ctrl_ready_high_with_valid" ||
+          case_id == "B013_ctrl_ready_high_without_valid" ||
+          case_id == "B014_ctrl_decode_idle_force_go" ||
+          case_id == "B015_ctrl_decode_run_prepare_disable" ||
+          case_id == "B016_ctrl_decode_sync_disable" ||
+          case_id == "B017_ctrl_decode_running_go" ||
+          case_id == "B018_ctrl_decode_terminating_stop_new_headers" ||
+          case_id == "B019_ctrl_decode_link_test_disable" ||
+          case_id == "B020_ctrl_decode_sync_test_disable" ||
+          case_id == "B021_ctrl_decode_reset_disable" ||
+          case_id == "B022_ctrl_decode_out_of_daq_disable" ||
+          case_id == "B023_csr_control_default_enable" ||
+          case_id == "B024_csr_control_write_zero_masks_running" ||
+          case_id == "B025_csr_control_write_one_unmasks_running" ||
+          case_id == "B026_csr_read_addr0_control_status" ||
+          case_id == "B027_csr_read_addr1_crc_counter" ||
+          case_id == "B029_csr_read_unused_word_zero" ||
+          case_id == "B031_csr_waitrequest_low_on_read" ||
+          case_id == "B032_csr_waitrequest_low_on_write" ||
+          case_id == "B033_csr_waitrequest_high_when_idle" ||
+          case_id == "B034_csr_reserved_control_bits_roundtrip" ||
+          case_id == "B036_data_byte_without_kchar_no_start" ||
+          case_id == "B039_long_zero_hit_frame_headerinfo_pulse" ||
+          case_id == "B041_long_one_hit_sop_and_eop_same_transfer" ||
+          case_id == "B059_long_crc_bad_raises_error1_on_eop" ||
+          case_id == "B060_long_crc_bad_increments_crc_counter" ||
+          case_id == "B079_short_crc_bad_raises_error1_on_last_hit" ||
+          case_id == "B080_short_crc_counter_accumulates" ||
+          case_id == "B112_long_good_frames_leave_crc_counter_stable" ||
+          case_id == "B113_bad_frames_accumulate_crc_counter" ||
+          case_id == "B114_mixed_good_bad_crc_count_matches_bad_frames" ||
+          case_id == "B098_idle_monitoring_accepts_header_without_running" ||
+          case_id == "B099_idle_monitoring_still_ignores_csr_zero") begin
+        run_basic_explicit_doc_case(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
         scb_case_end(case_id);
         return;
       end
@@ -1736,6 +2477,7 @@
           case_id == "E003_idle_command_same_cycle_header_still_sees_previous_running" ||
           case_id == "E004_terminating_command_same_cycle_open_frame_continues") begin
         run_edge_same_cycle_doc_case(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
         scb_case_end(case_id);
         return;
       end
@@ -1750,6 +2492,7 @@
           case_id == "E124_truncated_long_frame_never_asserts_eop" ||
           case_id == "E125_truncated_short_frame_never_asserts_eop") begin
         run_edge_explicit_doc_case(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
         scb_case_end(case_id);
         return;
       end
@@ -1768,6 +2511,7 @@
           case_id == "X025_ctrl_valid_low_payload_noise" ||
           case_id == "X026_ctrl_fast_oscillation_legal_illegal_mix") begin
         run_error_control_negative_case(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
         scb_case_end(case_id);
         return;
       end
@@ -1779,9 +2523,24 @@
           case_id == "X031_long_declared_len1_missing_payload" ||
           case_id == "X032_long_declared_len2_only_one_hit_present" ||
           case_id == "X033_long_declared_len_large_cut_midpayload" ||
+          case_id == "X034_long_bad_trailer_symbol_replaced_with_data" ||
+          case_id == "X035_long_extra_payload_after_declared_len" ||
+          case_id == "X036_long_new_header_inside_payload" ||
           case_id == "X037_long_comma_inside_payload_mode0" ||
-          case_id == "X039_long_valid_low_entire_malformed_frame") begin
+          case_id == "X039_long_valid_low_entire_malformed_frame" ||
+          case_id == "X040_short_header_only_no_counters" ||
+          case_id == "X041_short_missing_frame_number_byte1" ||
+          case_id == "X042_short_missing_event_counter_msb" ||
+          case_id == "X043_short_missing_event_counter_lsb" ||
+          case_id == "X044_short_declared_len1_missing_payload" ||
+          case_id == "X047_short_declared_len_large_cut_midpayload" ||
+          case_id == "X048_short_new_header_inside_payload" ||
+          case_id == "X049_short_extra_payload_after_declared_len" ||
+          (case_id == "X050_short_comma_inside_payload_mode0" && build_tag != "CFG_B") ||
+          (case_id == "X051_short_comma_inside_payload_mode1" && build_tag != "CFG_B") ||
+          case_id == "X052_short_valid_low_entire_malformed_frame") begin
         run_error_malformed_case(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
         scb_case_end(case_id);
         return;
       end
@@ -1802,6 +2561,7 @@
         drive_symbol(1'b0, 8'h00, '0, channel);
         drive_symbol(1'b0, byte'(bucket_case_index() & 8'hff), '0, channel);
         wait_cycles(6);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
         scb_case_end(case_id);
         return;
       end
@@ -1809,6 +2569,7 @@
       if (contains_ci("header_only")) begin
         drive_symbol(1'b1, HEADER_BYTE, '0, channel);
         wait_cycles(6);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
         scb_case_end(case_id);
         return;
       end
@@ -1828,9 +2589,10 @@
         if (contains_ci("two_hit"))
           frame_len = 2;
 
-        exp_hits = expected_hits_for_frame(frame_len, truncate_after_bytes, inject_comma, mode_halt_abort);
+        exp_hits = expected_hits_for_frame(short_mode, frame_len, truncate_after_bytes,
+                                           inject_loss_sync, inject_comma, mode_halt_abort);
         exp_headers = expected_headers_for_frame(frame_len, truncate_after_bytes, inject_comma, mode_halt_abort);
-        exp_real_eops = (exp_hits != 0) ? 1 : 0;
+        exp_real_eops = ((exp_hits != 0) && !inject_loss_sync) ? 1 : 0;
         if (exp_headers != 0 || exp_hits != 0 || exp_real_eops != 0) begin
           scb_expect_txn(
             case_id,
@@ -1846,8 +2608,8 @@
             exp_real_eops,
             (inject_bad_crc || (contains_ci("bad_every") && iter != 0 && iter[0])) ? 1 : 0,
             inject_parity_error || inject_decode_error,
-            inject_bad_crc || (contains_ci("bad_every") && iter != 0 && iter[0]),
-            inject_loss_sync,
+            1'b0,
+            1'b0,
             1'b0,
             derived_stop_boundary(terminate_after_bytes),
             6
@@ -1881,7 +2643,7 @@
           apply_case_csr_ops();
       end
 
-      wait_cycles(8);
+      scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
       scb_case_end(case_id);
     endtask
 
@@ -1998,10 +2760,15 @@
       int unsigned terminate_after_bytes = 32'hffff_ffff
     );
       int unsigned expected_hits;
+      int unsigned expected_real_eops;
       bit          expect_error0;
 
       wait_cycles(start_delay_cycles);
-      expected_hits = (frame_len == 0) ? 0 : 1;
+      if (inject_loss_sync)
+        expected_hits = expected_hits_before_loss_sync(short_mode, frame_len, payload_byte_count(short_mode, frame_len) / 2);
+      else
+        expected_hits = (frame_len == 0) ? 0 : 1;
+      expected_real_eops = ((expected_hits != 0) && !inject_loss_sync) ? 1 : 0;
       expect_error0 = inject_parity_error || inject_decode_error;
       scb_expect_txn(
         case_name,
@@ -2014,11 +2781,11 @@
         frame_len,
         expected_hits,
         1,
-        expected_hits != 0,
+        expected_real_eops,
         inject_bad_crc ? 1 : 0,
         expect_error0,
         1'b0,
-        inject_loss_sync,
+        1'b0,
         queued_overlap,
         stop_boundary,
         6

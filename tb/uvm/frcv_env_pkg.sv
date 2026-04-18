@@ -825,6 +825,11 @@ package frcv_env_pkg;
             if (active_txn.first_obs_time_ps == 0)
               active_txn.first_obs_time_ps = item.time_ps;
             active_txn.last_obs_time_ps = item.time_ps;
+            if (!item.hit_eop &&
+                active_txn.expected_real_eops == 0 &&
+                active_txn.observed_hits >= active_txn.expected_hits &&
+                active_txn.stop_boundary != "none")
+              finalize_active_txn("truncated_without_eop");
           end else begin
             report_unexpected_output(item);
             unexpected_output_count++;
@@ -902,6 +907,35 @@ package frcv_env_pkg;
     task automatic discard_pending_case_txns(string case_id);
       while (expected_q.size() > 0 && expected_q[0].case_id == case_id)
         void'(expected_q.pop_front());
+    endtask
+
+    function automatic bit case_has_pending_txn(string case_id);
+      if (active_txn != null && active_txn.case_id == case_id)
+        return 1'b1;
+      foreach (expected_q[idx]) begin
+        if (expected_q[idx].case_id == case_id)
+          return 1'b1;
+      end
+      return 1'b0;
+    endfunction
+
+    task automatic wait_case_txn_drain(string case_id, int unsigned max_cycles, string ctx);
+      repeat (max_cycles) begin
+        if (!case_has_pending_txn(case_id))
+          return;
+        @(posedge dbg_vif.clk);
+      end
+      `uvm_fatal(
+        "FRCV_SCB_TIMEOUT",
+        $sformatf(
+          "%s timed out waiting for case=%s to drain active=%s queue_depth=%0d queue_front=%s",
+          ctx,
+          case_id,
+          txn_summary(active_txn),
+          expected_q.size(),
+          (expected_q.size() > 0) ? txn_summary(expected_q[0]) : "empty"
+        )
+      )
     endtask
 
     task automatic snapshot_counters(
@@ -1375,6 +1409,7 @@ package frcv_env_pkg;
     endtask
 
     task automatic run_start();
+      csr_write(8'h00, 32'h0000_0001);
       send_ctrl(CTRL_RUN_PREPARE, "RUN_PREPARE");
       send_ctrl(CTRL_SYNC, "SYNC");
       send_ctrl(CTRL_RUNNING, "RUNNING");
@@ -1403,6 +1438,10 @@ package frcv_env_pkg;
 
     task automatic scb_discard_pending_case_txns(string case_id);
       m_env.m_scb.discard_pending_case_txns(case_id);
+    endtask
+
+    task automatic scb_wait_case_txn_drain(string case_id, int unsigned max_cycles, string ctx);
+      m_env.m_scb.wait_case_txn_drain(case_id, max_cycles, ctx);
     endtask
 
     task automatic scb_expect_txn(
@@ -1452,7 +1491,57 @@ package frcv_env_pkg;
       m_env.m_scb.expect_txn(txn);
     endtask
 
+    function automatic bit [15:0] frcv_crc16_next(bit [15:0] crc_reg, byte unsigned data_byte);
+      bit [15:0] next_crc;
+      bit [7:0]  data_v;
+
+      data_v = data_byte;
+      next_crc[0]  = crc_reg[15] ^ data_v[7] ^ crc_reg[14] ^ data_v[6] ^ crc_reg[13] ^ data_v[5] ^
+                     crc_reg[12] ^ data_v[4] ^ crc_reg[11] ^ data_v[3] ^ crc_reg[10] ^ data_v[2] ^
+                     crc_reg[9]  ^ data_v[1] ^ crc_reg[8]  ^ data_v[0];
+      next_crc[1]  = crc_reg[15] ^ data_v[7] ^ crc_reg[14] ^ data_v[6] ^ crc_reg[13] ^ data_v[5] ^
+                     crc_reg[12] ^ data_v[4] ^ crc_reg[11] ^ data_v[3] ^ crc_reg[10] ^ data_v[2] ^
+                     crc_reg[9]  ^ data_v[1];
+      next_crc[2]  = crc_reg[9]  ^ data_v[1] ^ crc_reg[8]  ^ data_v[0];
+      next_crc[3]  = crc_reg[10] ^ data_v[2] ^ crc_reg[9]  ^ data_v[1];
+      next_crc[4]  = crc_reg[11] ^ data_v[3] ^ crc_reg[10] ^ data_v[2];
+      next_crc[5]  = crc_reg[12] ^ data_v[4] ^ crc_reg[11] ^ data_v[3];
+      next_crc[6]  = crc_reg[13] ^ data_v[5] ^ crc_reg[12] ^ data_v[4];
+      next_crc[7]  = crc_reg[14] ^ data_v[6] ^ crc_reg[13] ^ data_v[5];
+      next_crc[8]  = crc_reg[15] ^ data_v[7] ^ crc_reg[14] ^ data_v[6] ^ crc_reg[0];
+      next_crc[9]  = crc_reg[15] ^ data_v[7] ^ crc_reg[1];
+      next_crc[10] = crc_reg[2];
+      next_crc[11] = crc_reg[3];
+      next_crc[12] = crc_reg[4];
+      next_crc[13] = crc_reg[5];
+      next_crc[14] = crc_reg[6];
+      next_crc[15] = crc_reg[15] ^ data_v[7] ^ crc_reg[14] ^ data_v[6] ^ crc_reg[13] ^ data_v[5] ^
+                     crc_reg[12] ^ data_v[4] ^ crc_reg[11] ^ data_v[3] ^ crc_reg[10] ^ data_v[2] ^
+                     crc_reg[9]  ^ data_v[1] ^ crc_reg[8]  ^ data_v[0] ^ crc_reg[7];
+      return next_crc;
+    endfunction
+
+    function automatic bit [15:0] frcv_crc16_trailer(input byte unsigned frame_bytes[$]);
+      bit [15:0] crc_reg;
+
+      crc_reg = 16'hffff;
+      foreach (frame_bytes[idx])
+        crc_reg = frcv_crc16_next(crc_reg, frame_bytes[idx]);
+      return ~crc_reg;
+    endfunction
+
     task automatic send_long_frame(int unsigned frame_number, bit [47:0] hit_word);
+      byte unsigned frame_bytes[$];
+      bit [15:0]    crc_trailer;
+
+      frame_bytes.push_back(byte'(frame_number[15:8]));
+      frame_bytes.push_back(byte'(frame_number[7:0]));
+      frame_bytes.push_back(8'h00);
+      frame_bytes.push_back(8'h01);
+      for (int byte_idx = 5; byte_idx >= 0; byte_idx--)
+        frame_bytes.push_back(byte'(hit_word[byte_idx*8 +: 8]));
+      crc_trailer = frcv_crc16_trailer(frame_bytes);
+
       drive_symbol(1'b1, HEADER_BYTE);
       drive_symbol(1'b0, byte'(frame_number[15:8]));
       drive_symbol(1'b0, byte'(frame_number[7:0]));
@@ -1460,18 +1549,27 @@ package frcv_env_pkg;
       drive_symbol(1'b0, 8'h01);
       for (int byte_idx = 5; byte_idx >= 0; byte_idx--)
         drive_symbol(1'b0, byte'(hit_word[byte_idx*8 +: 8]));
-      drive_symbol(1'b0, 8'h00);
-      drive_symbol(1'b0, 8'h00);
+      drive_symbol(1'b0, byte'(crc_trailer[15:8]));
+      drive_symbol(1'b0, byte'(crc_trailer[7:0]));
     endtask
 
     task automatic send_empty_frame(int unsigned frame_number);
+      byte unsigned frame_bytes[$];
+      bit [15:0]    crc_trailer;
+
+      frame_bytes.push_back(byte'(frame_number[15:8]));
+      frame_bytes.push_back(byte'(frame_number[7:0]));
+      frame_bytes.push_back(8'h00);
+      frame_bytes.push_back(8'h00);
+      crc_trailer = frcv_crc16_trailer(frame_bytes);
+
       drive_symbol(1'b1, HEADER_BYTE);
       drive_symbol(1'b0, byte'(frame_number[15:8]));
       drive_symbol(1'b0, byte'(frame_number[7:0]));
       drive_symbol(1'b0, 8'h00);
       drive_symbol(1'b0, 8'h00);
-      drive_symbol(1'b0, 8'h00);
-      drive_symbol(1'b0, 8'h00);
+      drive_symbol(1'b0, byte'(crc_trailer[15:8]));
+      drive_symbol(1'b0, byte'(crc_trailer[7:0]));
     endtask
 
     task automatic wait_for_counts(int unsigned exp_hits,

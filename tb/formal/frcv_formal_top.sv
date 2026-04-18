@@ -208,14 +208,17 @@ module frcv_formal_top #(
     .dbg_n_frame_len     (dbg_n_frame_len),
     .dbg_n_frame_number  (dbg_n_frame_number),
     .dbg_n_frame_flags   (dbg_n_frame_flags),
-    .dbg_n_frame_info_ready(dbg_n_frame_info_ready)
+    .dbg_n_frame_info_ready(dbg_n_frame_info_ready),
+    .dbg_n_crc_error     (dbg_n_crc_error)
   );
 
   frcv_counter_contract_sva u_counter_contract (
     .clk                 (i_clk),
     .rst                 (i_rst),
+    .hit_valid           (aso_hit_type0_valid),
     .hit_sop             (aso_hit_type0_startofpacket),
     .hit_eop             (aso_hit_type0_endofpacket),
+    .hit_error           (aso_hit_type0_error),
     .dbg_n_crc_error     (dbg_n_crc_error),
     .dbg_p_crc_err_count (dbg_p_crc_err_count),
     .dbg_frame_counter_head(dbg_frame_counter_head),

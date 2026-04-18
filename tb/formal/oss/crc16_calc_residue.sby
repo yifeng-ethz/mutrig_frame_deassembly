@@ -1,0 +1,16 @@
+[options]
+mode prove
+depth 10
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+plugin -i /data1/oss_formal/current/share/yosys/plugins/ghdl.so
+ghdl --std=08 crc16_calc.vhd -e crc16_calc
+read_verilog -formal -sv crc16_calc_residue_formal.sv
+prep -top crc16_calc_residue_formal
+
+[files]
+../../../rtl/crc16_calc.vhd
+crc16_calc_residue_formal.sv

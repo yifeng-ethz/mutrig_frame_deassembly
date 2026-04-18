@@ -27,7 +27,7 @@ The goal is not raw bin count inflation. Every coverpoint below is intended to p
 | `cp_channel_width_cfg` | `1`, `4`, `8` | `_hw.tcl` generic-driven widths |
 | `cp_csr_addr_width_cfg` | `1`, `2`, `8` | `_hw.tcl` generic-driven address widths |
 | `cp_ctrl_word_shape` | `legal_onehot`, `all_zero`, `two_hot`, `all_one` | control-negative closure |
-| `cp_header_accept_window` | `idle_monitoring`, `running_enabled`, `running_masked`, `terminating_blocked` | start-condition closure |
+| `cp_header_accept_window` | `idle_blocked`, `running_enabled`, `running_masked`, `terminating_blocked` | start-condition closure |
 | `cp_terminating_boundary` | `before_header`, `mid_header`, `mid_payload`, `crc_stage`, `after_eop` | upgrade-plan anchor |
 | `cp_headerinfo_pulse` | `zero_hit`, `nonzero_hit`, `long`, `short` | `headerinfo_valid` generation |
 | `cp_counter_snapshot` | `pre_sop`, `open_frame`, `post_eop`, `post_run_prepare` | CSR counter semantics |
@@ -38,7 +38,7 @@ The goal is not raw bin count inflation. Every coverpoint below is intended to p
 | Cross | Intent |
 |---|---|
 | `cp_run_state_cmd x cp_enable_source` | prove each state drives the expected enable path |
-| `cp_run_state_cmd x cp_header_accept_window` | distinguish `IDLE` monitoring, `RUNNING` masked/unmasked, and `TERMINATING` block |
+| `cp_run_state_cmd x cp_header_accept_window` | distinguish quiescent `IDLE`, `RUNNING` masked/unmasked, and `TERMINATING` block |
 | `cp_run_state_cmd x cp_terminating_boundary` | prove coverage for all stop points |
 | `cp_frame_mode x cp_frame_len_bucket` | long/short size-space closure |
 | `cp_frame_mode x cp_hit_count_bucket` | output packetization closure |

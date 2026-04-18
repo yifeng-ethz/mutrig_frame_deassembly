@@ -4,7 +4,7 @@
   <vendorID>MU3E</vendorID>
   <name>MU3E_MUTRIG_FRAME_DEASSEMBLY</name>
   <series>MU3E_FPGA_IP</series>
-  <version>26.0.6.0417</version>
+  <version>26.0.6.0418</version>
   <description>CMSIS-SVD description of the mutrig_frame_deassembly CSR window. This first-pass schema exposes the 4-word relative aperture as read-only WORD registers until the IP author publishes field-accurate semantics.</description>
   <addressUnitBits>8</addressUnitBits>
   <width>32</width>

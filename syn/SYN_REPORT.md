@@ -1,7 +1,7 @@
 # ⏳ SYN Report — mutrig_frame_deassembly
 
-**Revision:** `mutrig_frame_deassembly_syn_cfg_a` &nbsp; **Date:** `2026-04-17` &nbsp;
-**Device:** `5AGXBA7D4F31C5` &nbsp; **Build basis:** `26.0.6.0417 layout refresh`
+**Revision:** `mutrig_frame_deassembly_syn_cfg_a` &nbsp; **Date:** `2026-04-18` &nbsp;
+**Device:** `5AGXBA7D4F31C5` &nbsp; **Build basis:** `26.0.6.0418 CRC/accounting fix batch`
 
 This file is the standalone synthesis signoff placeholder for the active layout/metadata
 refresh. The Quartus project scaffold exists under [`quartus/`](quartus/), but the compile

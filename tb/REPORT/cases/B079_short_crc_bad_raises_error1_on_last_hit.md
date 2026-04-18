@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Short frame with bad CRC
-- **Primary checks:** final hit carries `error(1)=1`
+- **Primary checks:** one-cycle post-frame `error(1)` sideband pulse is emitted off the `valid/eop` beat
 - **Contract anchor:** short CRC bad path
 
 ## Execution Evidence

@@ -8,7 +8,7 @@ namespace eval ::mu3e::cmsis::spec {}
 
 proc ::mu3e::cmsis::spec::build_device {} {
     return [::mu3e::cmsis::svd::device MU3E_MUTRIG_FRAME_DEASSEMBLY \
-        -version 26.0.6.0417 \
+        -version 26.0.6.0418 \
         -description "CMSIS-SVD description of the mutrig_frame_deassembly CSR window. This first-pass schema exposes the 4-word relative aperture as read-only WORD registers until the IP author publishes field-accurate semantics." \
         -peripherals [list \
             [::mu3e::cmsis::svd::peripheral MUTRIG_FRAME_DEASSEMBLY_CSR 0x0 \
