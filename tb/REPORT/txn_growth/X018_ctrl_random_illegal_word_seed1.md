@@ -1,6 +1,6 @@
 # X018_ctrl_random_illegal_word_seed1 — transaction growth
 
-**Observed txns:** `64`
+**Observed txns:** `0`
 
 <!-- purpose: show how code coverage saturates with transaction count inside one random case. -->
 <!-- source: log-spaced checkpoint UCDBs saved by the test class at txn = 1, 2, 4, 8, ... N. -->

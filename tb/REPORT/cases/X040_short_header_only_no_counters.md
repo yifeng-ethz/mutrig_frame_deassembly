@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 67.70 | n/a | 0.00 | 88.33 | n/a |
-| branch | 45.03 | n/a | 0.00 | 78.95 | n/a |
-| cond | 41.38 | n/a | 0.00 | 75.86 | n/a |
-| expr | 81.48 | n/a | 0.00 | 98.77 | n/a |
-| fsm_state | 42.86 | n/a | 0.00 | 100.00 | n/a |
-| fsm_trans | 20.00 | n/a | 0.00 | 66.67 | n/a |
-| toggle | 12.72 | n/a | 0.00 | 48.70 | n/a |
+| stmt | 68.73 | n/a | 0.00 | 87.63 | n/a |
+| branch | 43.33 | n/a | 0.00 | 76.67 | n/a |
+| cond | 37.50 | n/a | 0.00 | 50.00 | n/a |
+| expr | 4.94 | n/a | 0.00 | 98.77 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 4.03 | n/a | 0.00 | 28.92 | n/a |
 
 ---
 _Back to [bucket](../buckets/ERROR.md) &middot; [dashboard](../../DV_REPORT.md)_

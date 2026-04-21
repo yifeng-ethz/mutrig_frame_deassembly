@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Send `IDLE` word
-- **Primary checks:** `receiver_force_go=1`, `receiver_go=0`
+- **Primary checks:** `receiver_force_go=0`, `receiver_go=0`
 - **Contract anchor:** control decode table
 
 ## Execution Evidence
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 58.37 | n/a | 0.00 | 85.21 | n/a |
-| branch | 34.44 | n/a | 0.00 | 72.85 | n/a |
-| cond | 20.69 | n/a | 0.00 | 65.52 | n/a |
-| expr | 46.91 | n/a | 0.00 | 98.77 | n/a |
-| fsm_state | 14.29 | n/a | 0.00 | 85.71 | n/a |
-| fsm_trans | 0.00 | n/a | 0.00 | 46.67 | n/a |
-| toggle | 6.47 | n/a | 0.10 | 19.03 | n/a |
+| stmt | 59.45 | n/a | 0.00 | 86.94 | n/a |
+| branch | 32.00 | n/a | 0.00 | 74.00 | n/a |
+| cond | 7.50 | n/a | 0.00 | 62.50 | n/a |
+| expr | 0.00 | n/a | 0.00 | 98.77 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 0.63 | n/a | 0.00 | 15.15 | n/a |
 
 ---
 _Back to [bucket](../buckets/BASIC.md) &middot; [dashboard](../../DV_REPORT.md)_

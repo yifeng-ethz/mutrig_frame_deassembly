@@ -1,6 +1,6 @@
 # ✅ P074_mode1_comma_random_positions
 
-**Bucket:** `PROF` &nbsp; **Method:** `R` &nbsp; **Build:** `CFG_B` &nbsp; **Effort:** `extensive` &nbsp; **Result:** `pass`
+**Bucket:** `PROF` &nbsp; **Method:** `R` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
 
 ## Intent
 
@@ -23,13 +23,13 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `25000` |
+| ✅ | observed_txn | `0` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/P074_mode1_comma_random_positions_after_s1.log`](../../uvm/logs/P074_mode1_comma_random_positions_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/P074_mode1_comma_random_positions_s1.ucdb`](../../uvm/cov_after/P074_mode1_comma_random_positions_s1.ucdb) |
-| ℹ️ | log.headers | `25000` |
-| ℹ️ | log.hits | `25000` |
-| ℹ️ | log.real_eops | `25000` |
+| ℹ️ | log.headers | `0` |
+| ℹ️ | log.hits | `0` |
+| ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
 
 ## Coverage
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 80.08 | 0.00 | 0.00 | 94.55 | 0.00 |
-| branch | 64.24 | 0.00 | 0.00 | 87.50 | 0.00 |
-| cond | 58.62 | 0.00 | 0.00 | 79.31 | 0.00 |
-| expr | 98.77 | 0.00 | 0.00 | 98.77 | 0.00 |
-| fsm_state | 85.71 | 0.00 | 0.00 | 100.00 | 0.00 |
-| fsm_trans | 40.00 | 0.00 | 0.00 | 73.33 | 0.00 |
-| toggle | 44.89 | 0.00 | 4.17 | 60.27 | 0.00 |
+| stmt | 73.88 | n/a | 0.00 | 89.69 | n/a |
+| branch | 54.00 | n/a | 0.00 | 80.67 | n/a |
+| cond | 47.50 | n/a | 0.00 | 65.00 | n/a |
+| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 18.72 | n/a | 0.00 | 46.62 | n/a |
 
 ## Transaction Growth (checkpoint UCDBs)
 

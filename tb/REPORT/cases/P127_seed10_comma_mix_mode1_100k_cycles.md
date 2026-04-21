@@ -1,6 +1,6 @@
 # ✅ P127_seed10_comma_mix_mode1_100k_cycles
 
-**Bucket:** `PROF` &nbsp; **Method:** `K` &nbsp; **Build:** `CFG_B` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
+**Bucket:** `PROF` &nbsp; **Method:** `K` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
 
 ## Intent
 
@@ -23,13 +23,13 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `64` |
+| ✅ | observed_txn | `0` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/P127_seed10_comma_mix_mode1_100k_cycles_after_s1.log`](../../uvm/logs/P127_seed10_comma_mix_mode1_100k_cycles_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/P127_seed10_comma_mix_mode1_100k_cycles_s1.ucdb`](../../uvm/cov_after/P127_seed10_comma_mix_mode1_100k_cycles_s1.ucdb) |
-| ℹ️ | log.headers | `64` |
-| ℹ️ | log.hits | `256` |
-| ℹ️ | log.real_eops | `64` |
+| ℹ️ | log.headers | `0` |
+| ℹ️ | log.hits | `0` |
+| ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
 
 ## Coverage
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 80.08 | 1.25 | 0.00 | 95.33 | 0.00 |
-| branch | 66.23 | 1.03 | 0.00 | 89.47 | 0.00 |
-| cond | 58.62 | 0.92 | 0.00 | 86.21 | 0.00 |
-| expr | 98.77 | 1.54 | 0.00 | 98.77 | 0.00 |
-| fsm_state | 85.71 | 1.34 | 0.00 | 100.00 | 0.00 |
-| fsm_trans | 40.00 | 0.62 | 0.00 | 80.00 | 0.00 |
-| toggle | 49.01 | 0.77 | 0.00 | 61.87 | 0.00 |
+| stmt | 82.47 | n/a | 0.00 | 92.78 | n/a |
+| branch | 71.33 | n/a | 0.00 | 86.67 | n/a |
+| cond | 55.00 | n/a | 0.00 | 65.00 | n/a |
+| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 43.71 | n/a | 0.00 | 52.29 | n/a |
 
 ---
 _Back to [bucket](../buckets/PROF.md) &middot; [dashboard](../../DV_REPORT.md)_

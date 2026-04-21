@@ -19,8 +19,8 @@
 |:---:|---|---|
 | ℹ️ | case_count | `119` |
 | ℹ️ | effort | `practical` |
-| ℹ️ | iter_cap | `None` |
-| ℹ️ | payload_cap | `None` |
+| ℹ️ | iter_cap | `32` |
+| ℹ️ | payload_cap | `2048` |
 | ℹ️ | txns | `24` |
 | ⚠️ | functional_cross_pct | `40.62` |
 | ℹ️ | queued_overlap | `0` |
@@ -33,13 +33,13 @@
 
 | metric | pct |
 |---|---|
-| stmt | 91.83 |
-| branch | 82.12 |
-| cond | 79.31 |
+| stmt | 91.35 |
+| branch | 81.33 |
+| cond | 69.23 |
 | expr | 98.77 |
 | fsm_state | 100.00 |
-| fsm_trans | 60.00 |
-| toggle | 53.39 |
+| fsm_trans | 73.33 |
+| toggle | 48.01 |
 
 ## Transaction growth curve
 
@@ -64,15 +64,6 @@
 | 14 | `E021_midframe_channel_change_not_tracked_internally` | `` | 40.62 | 0 | hit_eop |
 | 15 | `E024_header_immediately_after_run_prepare_blocked` | `` | 40.62 | 0 | hit_eop |
 | 16 | `E025_header_immediately_after_sync_blocked` | `` | 40.62 | 0 | hit_eop |
-
-## Issue reference
-
-| status | field | value |
-|:---:|---|---|
-| ℹ️ | bug_ref | [FRCV-2026-04-17-003](../../BUG_HISTORY.md) |
-| ✅ | rerun_date | `2026-04-18` |
-| ✅ | rerun_verdict | Before fix on 2026-04-17 this run reproduced unexpected_outputs=3 with counter_checks_failed=0, UVM_ERROR=0, and UVM_FATAL=0. After fix on 2026-04-18 the rerun is clean: unexpected_outputs=0, counter_checks_failed=0, UVM_ERROR=0, and UVM_FATAL=0. |
-| ℹ️ | rerun_log | [uvm/logs/bucket_frame_edge_cfg_a_after_s1.log](../../uvm/logs/bucket_frame_edge_cfg_a_after_s1.log) |
 
 ---
 _Back to [dashboard](../../DV_REPORT.md)_

@@ -1,6 +1,6 @@
 # P074_mode1_comma_random_positions — transaction growth
 
-**Observed txns:** `25000`
+**Observed txns:** `0`
 
 <!-- purpose: show how code coverage saturates with transaction count inside one random case. -->
 <!-- source: log-spaced checkpoint UCDBs saved by the test class at txn = 1, 2, 4, 8, ... N. -->

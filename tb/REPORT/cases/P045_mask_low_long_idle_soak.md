@@ -1,6 +1,6 @@
-# ✅ P045_mask_low_long_idle_soak
+# ❌ P045_mask_low_long_idle_soak
 
-**Bucket:** `PROF` &nbsp; **Method:** `K` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
+**Bucket:** `PROF` &nbsp; **Method:** `K` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `fail`
 
 ## Intent
 
@@ -23,7 +23,7 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `0` |
+| ❌ | observed_txn | `0` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/P045_mask_low_long_idle_soak_after_s1.log`](../../uvm/logs/P045_mask_low_long_idle_soak_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/P045_mask_low_long_idle_soak_s1.ucdb`](../../uvm/cov_after/P045_mask_low_long_idle_soak_s1.ucdb) |
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 63.81 | n/a | 1.17 | 93.00 | n/a |
-| branch | 42.38 | n/a | 1.99 | 85.43 | n/a |
-| cond | 37.93 | n/a | 0.00 | 79.31 | n/a |
-| expr | 46.91 | n/a | 0.00 | 98.77 | n/a |
-| fsm_state | 14.29 | n/a | 0.00 | 100.00 | n/a |
-| fsm_trans | 0.00 | n/a | 0.00 | 73.33 | n/a |
-| toggle | 7.82 | n/a | 0.16 | 54.54 | n/a |
+| stmt | n/a | n/a | n/a | n/a | n/a |
+| branch | n/a | n/a | n/a | n/a | n/a |
+| cond | n/a | n/a | n/a | n/a | n/a |
+| expr | n/a | n/a | n/a | n/a | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | n/a | n/a | n/a | n/a | n/a |
 
 ---
 _Back to [bucket](../buckets/PROF.md) &middot; [dashboard](../../DV_REPORT.md)_

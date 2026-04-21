@@ -23,13 +23,13 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `1` |
+| ✅ | observed_txn | `0` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/X005_reset_in_short_unpack_after_s1.log`](../../uvm/logs/X005_reset_in_short_unpack_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/X005_reset_in_short_unpack_s1.ucdb`](../../uvm/cov_after/X005_reset_in_short_unpack_s1.ucdb) |
-| ℹ️ | log.headers | `1` |
-| ℹ️ | log.hits | `1` |
-| ℹ️ | log.real_eops | `1` |
+| ℹ️ | log.headers | `0` |
+| ℹ️ | log.hits | `0` |
+| ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
 
 ## Coverage
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 80.16 | 80.16 | 4.28 | 84.05 | 4.28 |
-| branch | 66.23 | 66.23 | 5.96 | 69.54 | 5.96 |
-| cond | 48.28 | 48.28 | 3.45 | 51.72 | 3.45 |
-| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
-| fsm_state | 100.00 | 100.00 | 14.29 | 100.00 | 14.29 |
-| fsm_trans | 46.67 | 46.67 | 13.33 | 53.33 | 13.33 |
-| toggle | 19.03 | 19.03 | 1.62 | 19.34 | 1.62 |
+| stmt | 73.88 | n/a | 1.37 | 75.26 | n/a |
+| branch | 55.33 | n/a | 3.33 | 57.33 | n/a |
+| cond | 40.00 | n/a | 0.00 | 42.50 | n/a |
+| expr | 98.77 | n/a | 6.17 | 98.77 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 13.87 | n/a | 1.12 | 14.36 | n/a |
 
 ---
 _Back to [bucket](../buckets/ERROR.md) &middot; [dashboard](../../DV_REPORT.md)_

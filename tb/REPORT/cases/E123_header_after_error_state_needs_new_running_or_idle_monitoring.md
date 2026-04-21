@@ -1,6 +1,6 @@
-# ✅ E123_header_after_error_state_needs_new_running_or_idle_monitoring
+# ❌ E123_header_after_error_state_needs_new_running_or_idle_monitoring
 
-**Bucket:** `EDGE` &nbsp; **Method:** `D` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
+**Bucket:** `EDGE` &nbsp; **Method:** `D` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `fail`
 
 ## Intent
 
@@ -23,7 +23,7 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `0` |
+| ❌ | observed_txn | `0` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E123_header_after_error_state_needs_new_running_or_idle_monitoring_after_s1.log`](../../uvm/logs/E123_header_after_error_state_needs_new_running_or_idle_monitoring_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E123_header_after_error_state_needs_new_running_or_idle_monitoring_s1.ucdb`](../../uvm/cov_after/E123_header_after_error_state_needs_new_running_or_idle_monitoring_s1.ucdb) |
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 58.37 | n/a | 0.00 | 96.50 | n/a |
-| branch | 34.44 | n/a | 0.00 | 90.79 | n/a |
-| cond | 20.69 | n/a | 0.00 | 89.66 | n/a |
-| expr | 46.91 | n/a | 0.00 | 98.77 | n/a |
-| fsm_state | 14.29 | n/a | 0.00 | 100.00 | n/a |
-| fsm_trans | 0.00 | n/a | 0.00 | 66.67 | n/a |
-| toggle | 6.36 | n/a | 0.00 | 53.89 | n/a |
+| stmt | n/a | n/a | n/a | n/a | n/a |
+| branch | n/a | n/a | n/a | n/a | n/a |
+| cond | n/a | n/a | n/a | n/a | n/a |
+| expr | n/a | n/a | n/a | n/a | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | n/a | n/a | n/a | n/a | n/a |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

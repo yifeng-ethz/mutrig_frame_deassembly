@@ -23,11 +23,11 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `1` |
+| ✅ | observed_txn | `0` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E002_running_command_same_cycle_header_not_accepted_after_s1.log`](../../uvm/logs/E002_running_command_same_cycle_header_not_accepted_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E002_running_command_same_cycle_header_not_accepted_s1.ucdb`](../../uvm/cov_after/E002_running_command_same_cycle_header_not_accepted_s1.ucdb) |
-| ℹ️ | log.headers | `1` |
+| ℹ️ | log.headers | `0` |
 | ℹ️ | log.hits | `0` |
 | ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 71.21 | 71.21 | 0.00 | 79.77 | 0.00 |
-| branch | 52.98 | 52.98 | 0.00 | 63.58 | 0.00 |
-| cond | 51.72 | 51.72 | 3.45 | 51.72 | 3.45 |
-| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
-| fsm_state | 57.14 | 57.14 | 0.00 | 85.71 | 0.00 |
-| fsm_trans | 26.67 | 26.67 | 6.67 | 46.67 | 6.67 |
-| toggle | 14.81 | 14.81 | 0.63 | 16.53 | 0.63 |
+| stmt | 78.01 | n/a | 0.00 | 81.44 | n/a |
+| branch | 60.67 | n/a | 0.00 | 65.33 | n/a |
+| cond | 37.50 | n/a | 0.00 | 45.00 | n/a |
+| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 12.78 | n/a | 1.29 | 14.23 | n/a |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

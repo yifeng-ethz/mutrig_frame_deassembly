@@ -23,11 +23,11 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `1` |
+| ✅ | observed_txn | `0` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/B065_short_zero_hit_frame_headerinfo_pulse_after_s1.log`](../../uvm/logs/B065_short_zero_hit_frame_headerinfo_pulse_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/B065_short_zero_hit_frame_headerinfo_pulse_s1.ucdb`](../../uvm/cov_after/B065_short_zero_hit_frame_headerinfo_pulse_s1.ucdb) |
-| ℹ️ | log.headers | `1` |
+| ℹ️ | log.headers | `0` |
 | ℹ️ | log.hits | `0` |
 | ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 74.32 | 74.32 | 0.78 | 89.88 | 0.78 |
-| branch | 52.98 | 52.98 | 1.32 | 82.78 | 1.32 |
-| cond | 44.83 | 44.83 | 0.00 | 75.86 | 0.00 |
-| expr | 92.59 | 92.59 | 0.00 | 98.77 | 0.00 |
-| fsm_state | 71.43 | 71.43 | 0.00 | 85.71 | 0.00 |
-| fsm_trans | 33.33 | 33.33 | 0.00 | 60.00 | 0.00 |
-| toggle | 14.60 | 14.60 | 0.47 | 29.51 | 0.47 |
+| stmt | 76.63 | n/a | 0.69 | 91.07 | n/a |
+| branch | 54.67 | n/a | 1.33 | 84.00 | n/a |
+| cond | 42.50 | n/a | 0.00 | 75.00 | n/a |
+| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 10.96 | n/a | 0.50 | 28.79 | n/a |
 
 ---
 _Back to [bucket](../buckets/BASIC.md) &middot; [dashboard](../../DV_REPORT.md)_

@@ -5,8 +5,8 @@
 ## Intent
 
 - **Scenario:** Leave run state in `IDLE`, do not send `RUNNING`
-- **Primary checks:** header is still parsed
-- **Contract anchor:** receiver-force-go monitor mode
+- **Primary checks:** header stays blocked until `RUNNING` reopens parsing
+- **Contract anchor:** `IDLE` is quiescent in current RTL
 
 ## Execution Evidence
 
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 58.37 | n/a | 0.00 | 97.67 | n/a |
-| branch | 34.44 | n/a | 0.00 | 92.76 | n/a |
-| cond | 20.69 | n/a | 0.00 | 79.31 | n/a |
+| stmt | 61.86 | n/a | 0.00 | 97.94 | n/a |
+| branch | 34.00 | n/a | 0.00 | 94.00 | n/a |
+| cond | 15.00 | n/a | 0.00 | 77.50 | n/a |
 | expr | 46.91 | n/a | 0.00 | 98.77 | n/a |
-| fsm_state | 14.29 | n/a | 0.00 | 100.00 | n/a |
-| fsm_trans | 0.00 | n/a | 0.00 | 80.00 | n/a |
-| toggle | 5.84 | n/a | 0.00 | 38.79 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 4.56 | n/a | 0.00 | 39.15 | n/a |
 
 ---
 _Back to [bucket](../buckets/BASIC.md) &middot; [dashboard](../../DV_REPORT.md)_

@@ -1,6 +1,6 @@
 # ✅ E023_header_after_comma_recovery_mode1_resumes_old_frame_not_new_header
 
-**Bucket:** `EDGE` &nbsp; **Method:** `D` &nbsp; **Build:** `CFG_B` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
+**Bucket:** `EDGE` &nbsp; **Method:** `D` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
 
 ## Intent
 
@@ -23,13 +23,13 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `1` |
+| ✅ | observed_txn | `0` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E023_header_after_comma_recovery_mode1_resumes_old_frame_not_new_header_after_s1.log`](../../uvm/logs/E023_header_after_comma_recovery_mode1_resumes_old_frame_not_new_header_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E023_header_after_comma_recovery_mode1_resumes_old_frame_not_new_header_s1.ucdb`](../../uvm/cov_after/E023_header_after_comma_recovery_mode1_resumes_old_frame_not_new_header_s1.ucdb) |
-| ℹ️ | log.headers | `1` |
-| ℹ️ | log.hits | `1` |
-| ℹ️ | log.real_eops | `1` |
+| ℹ️ | log.headers | `0` |
+| ℹ️ | log.hits | `0` |
+| ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
 
 ## Coverage
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 77.34 | 77.34 | 0.00 | 84.05 | 0.00 |
-| branch | 62.25 | 62.25 | 0.66 | 71.05 | 0.66 |
-| cond | 48.28 | 48.28 | 0.00 | 72.41 | 0.00 |
-| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
-| fsm_state | 71.43 | 71.43 | 0.00 | 85.71 | 0.00 |
-| fsm_trans | 26.67 | 26.67 | 0.00 | 46.67 | 0.00 |
-| toggle | 16.21 | 16.21 | 0.00 | 44.63 | 0.00 |
+| stmt | 73.88 | n/a | 0.00 | 85.22 | n/a |
+| branch | 54.00 | n/a | 0.00 | 71.33 | n/a |
+| cond | 47.50 | n/a | 0.00 | 55.00 | n/a |
+| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 12.61 | n/a | 0.00 | 17.43 | n/a |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

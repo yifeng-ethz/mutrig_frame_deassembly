@@ -5,7 +5,7 @@
 ## Intent
 
 - **Scenario:** Stay in `IDLE`, drive a valid header sequence
-- **Primary checks:** parser accepts header because `receiver_force_go=1`
+- **Primary checks:** parser remains blocked because current RTL keeps `receiver_force_go=0` in `IDLE`
 - **Contract anchor:** `proc_run_control_mgmt_agent`, `proc_enable_ctrl`
 
 ## Execution Evidence
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 58.37 | n/a | 0.39 | 80.16 | n/a |
-| branch | 34.44 | n/a | 0.66 | 64.24 | n/a |
-| cond | 20.69 | n/a | 0.00 | 48.28 | n/a |
-| expr | 46.91 | n/a | 0.00 | 98.77 | n/a |
-| fsm_state | 14.29 | n/a | 0.00 | 85.71 | n/a |
-| fsm_trans | 0.00 | n/a | 0.00 | 40.00 | n/a |
-| toggle | 5.84 | n/a | 0.00 | 16.84 | n/a |
+| stmt | 61.86 | n/a | 2.75 | 61.86 | n/a |
+| branch | 34.00 | n/a | 3.33 | 34.00 | n/a |
+| cond | 15.00 | n/a | 7.50 | 15.00 | n/a |
+| expr | 46.91 | n/a | 46.91 | 46.91 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 4.39 | n/a | 3.90 | 4.62 | n/a |
 
 ---
 _Back to [bucket](../buckets/BASIC.md) &middot; [dashboard](../../DV_REPORT.md)_

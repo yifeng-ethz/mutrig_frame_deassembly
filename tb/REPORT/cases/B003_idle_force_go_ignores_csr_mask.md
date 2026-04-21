@@ -5,8 +5,8 @@
 ## Intent
 
 - **Scenario:** Write `csr.control(0)=0`, remain in `IDLE`, drive header
-- **Primary checks:** header still accepted in monitoring mode
-- **Contract anchor:** `receiver_force_go` bypass of CSR mask
+- **Primary checks:** frame stays blocked; there is no `IDLE` monitor-mode bypass in current RTL
+- **Contract anchor:** `receiver_force_go` path is inactive in `IDLE`
 
 ## Execution Evidence
 
@@ -38,13 +38,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 58.37 | n/a | 0.00 | 80.16 | n/a |
-| branch | 34.44 | n/a | 0.00 | 64.24 | n/a |
-| cond | 20.69 | n/a | 0.00 | 48.28 | n/a |
-| expr | 46.91 | n/a | 0.00 | 98.77 | n/a |
-| fsm_state | 14.29 | n/a | 0.00 | 85.71 | n/a |
-| fsm_trans | 0.00 | n/a | 0.00 | 40.00 | n/a |
-| toggle | 6.10 | n/a | 0.00 | 16.84 | n/a |
+| stmt | 62.54 | n/a | 0.69 | 62.54 | n/a |
+| branch | 35.33 | n/a | 1.33 | 35.33 | n/a |
+| cond | 15.00 | n/a | 0.00 | 15.00 | n/a |
+| expr | 40.74 | n/a | 0.00 | 46.91 | n/a |
+| fsm_state | n/a | n/a | n/a | n/a | n/a |
+| fsm_trans | n/a | n/a | n/a | n/a | n/a |
+| toggle | 4.26 | n/a | 0.33 | 4.95 | n/a |
 
 ---
 _Back to [bucket](../buckets/BASIC.md) &middot; [dashboard](../../DV_REPORT.md)_
