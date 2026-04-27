@@ -1,6 +1,6 @@
 # ⚠️ ERROR bucket
 
-**Planned:** `130` &nbsp; **Evidenced:** `128` &nbsp; **Status:** ⚠️
+**Planned:** `130` &nbsp; **Evidenced:** `130` &nbsp; **Status:** ⚠️
 
 ## Merged code coverage (this bucket)
 
@@ -15,11 +15,11 @@
 |:---:|---|---|---|
 | ✅ | stmt | 95.19 | 95.0 |
 | ⚠️ | branch | 89.33 | 90.0 |
-| ℹ️ | cond | 67.50 | - |
+| ℹ️ | cond | 70.00 | - |
 | ℹ️ | expr | 98.77 | - |
 | ❓ | fsm_state | n/a | 95.0 |
 | ❓ | fsm_trans | n/a | 90.0 |
-| ⚠️ | toggle | 50.48 | 80.0 |
+| ⚠️ | toggle | 53.62 | 80.0 |
 
 ## Ordered merge trace
 
@@ -125,36 +125,38 @@
 | ✅ | 96 | `X096_csr_control_write_during_payload` | stmt=94.85, branch=88.67, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=36.78 | [case](../cases/X096_csr_control_write_during_payload.md) |
 | ✅ | 97 | `X097_csr_poll_word2_every_cycle_open_frame` | stmt=94.85, branch=88.67, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=36.78 | [case](../cases/X097_csr_poll_word2_every_cycle_open_frame.md) |
 | ✅ | 98 | `X098_csr_poll_word1_every_cycle_badcrc` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=36.78 | [case](../cases/X098_csr_poll_word1_every_cycle_badcrc.md) |
-| ✅ | 99 | `X100_csr_mask_high_after_error_state` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=36.78 | [case](../cases/X100_csr_mask_high_after_error_state.md) |
-| ✅ | 100 | `X101_waitrequest_expected_high_idle_negative` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=36.78 | [case](../cases/X101_waitrequest_expected_high_idle_negative.md) |
-| ✅ | 101 | `X102_waitrequest_stuck_low_detection` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=36.78 | [case](../cases/X102_waitrequest_stuck_low_detection.md) |
-| ✅ | 102 | `X103_word0_status_read_before_headerinfo` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=36.78 | [case](../cases/X103_word0_status_read_before_headerinfo.md) |
-| ✅ | 103 | `X104_word0_status_read_after_runprepare` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X104_word0_status_read_after_runprepare.md) |
-| ✅ | 104 | `X105_postterminate_fresh_frame_attempt_from_idle` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X105_postterminate_fresh_frame_attempt_from_idle.md) |
-| ✅ | 105 | `X106_postterminate_header_same_cycle_as_ctrl_edge` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X106_postterminate_header_same_cycle_as_ctrl_edge.md) |
-| ✅ | 106 | `X107_stop_midframe_without_terminal_marker` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X107_stop_midframe_without_terminal_marker.md) |
-| ✅ | 107 | `X108_stop_midframe_ready_never_drops` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X108_stop_midframe_ready_never_drops.md) |
-| ✅ | 108 | `X109_stop_during_long_frame_then_second_header` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X109_stop_during_long_frame_then_second_header.md) |
-| ✅ | 109 | `X110_stop_during_short_frame_then_second_header` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X110_stop_during_short_frame_then_second_header.md) |
-| ✅ | 110 | `X111_stop_then_illegal_ctrl_then_idle` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X111_stop_then_illegal_ctrl_then_idle.md) |
-| ✅ | 111 | `X112_stop_then_runprepare_before_eop` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X112_stop_then_runprepare_before_eop.md) |
-| ✅ | 112 | `X113_stop_then_sync_without_idle` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X113_stop_then_sync_without_idle.md) |
-| ✅ | 113 | `X114_stop_then_running_reopen_window` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X114_stop_then_running_reopen_window.md) |
-| ✅ | 114 | `X115_emulator_mismatch_repro_openframe_only` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X115_emulator_mismatch_repro_openframe_only.md) |
-| ✅ | 115 | `X116_emulator_mismatch_repro_postedge_header` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X116_emulator_mismatch_repro_postedge_header.md) |
-| ✅ | 116 | `X117_termination_gap_signature_regression` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X117_termination_gap_signature_regression.md) |
-| ✅ | 117 | `X118_cfgC_channel_width1_invalid_channel_drive` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X118_cfgC_channel_width1_invalid_channel_drive.md) |
-| ✅ | 118 | `X120_cfgE_addrwidth1_highaddr_alias_misuse` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X120_cfgE_addrwidth1_highaddr_alias_misuse.md) |
-| ✅ | 119 | `X121_cfgF_addrwidth8_highaddr_abuse` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X121_cfgF_addrwidth8_highaddr_abuse.md) |
-| ✅ | 120 | `X122_cfgB_modehalt1_abort_assumption_negative` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X122_cfgB_modehalt1_abort_assumption_negative.md) |
-| ✅ | 121 | `X123_cfgA_modehalt0_hold_assumption_negative` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X123_cfgA_modehalt0_hold_assumption_negative.md) |
-| ✅ | 122 | `X124_cfgG_debuglv2_functional_delta_negative` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X124_cfgG_debuglv2_functional_delta_negative.md) |
-| ✅ | 123 | `X125_hw_tcl_readlatency_mismatch_negative` | stmt=95.19, branch=89.33, cond=62.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.27 | [case](../cases/X125_hw_tcl_readlatency_mismatch_negative.md) |
-| ✅ | 124 | `X126_hw_tcl_maxchannel_mismatch_negative` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=50.48 | [case](../cases/X126_hw_tcl_maxchannel_mismatch_negative.md) |
-| ✅ | 125 | `X127_hw_tcl_ctrl_readylatency_assumption_negative` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=50.48 | [case](../cases/X127_hw_tcl_ctrl_readylatency_assumption_negative.md) |
-| ✅ | 126 | `X128_hw_tcl_headerinfo_channelwidth_mismatch` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=50.48 | [case](../cases/X128_hw_tcl_headerinfo_channelwidth_mismatch.md) |
-| ✅ | 127 | `X129_build_matrix_compile_smoke_failfast` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=50.48 | [case](../cases/X129_build_matrix_compile_smoke_failfast.md) |
-| ✅ | 128 | `X130_known_gap_bundle_current_contract` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=50.48 | [case](../cases/X130_known_gap_bundle_current_contract.md) |
+| ✅ | 99 | `X099_csr_mask_low_then_illegal_ctrl` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.07 | [case](../cases/X099_csr_mask_low_then_illegal_ctrl.md) |
+| ✅ | 100 | `X100_csr_mask_high_after_error_state` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.07 | [case](../cases/X100_csr_mask_high_after_error_state.md) |
+| ✅ | 101 | `X101_waitrequest_expected_high_idle_negative` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.07 | [case](../cases/X101_waitrequest_expected_high_idle_negative.md) |
+| ✅ | 102 | `X102_waitrequest_stuck_low_detection` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.07 | [case](../cases/X102_waitrequest_stuck_low_detection.md) |
+| ✅ | 103 | `X103_word0_status_read_before_headerinfo` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.07 | [case](../cases/X103_word0_status_read_before_headerinfo.md) |
+| ✅ | 104 | `X104_word0_status_read_after_runprepare` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X104_word0_status_read_after_runprepare.md) |
+| ✅ | 105 | `X105_postterminate_fresh_frame_attempt_from_idle` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X105_postterminate_fresh_frame_attempt_from_idle.md) |
+| ✅ | 106 | `X106_postterminate_header_same_cycle_as_ctrl_edge` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X106_postterminate_header_same_cycle_as_ctrl_edge.md) |
+| ✅ | 107 | `X107_stop_midframe_without_terminal_marker` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X107_stop_midframe_without_terminal_marker.md) |
+| ✅ | 108 | `X108_stop_midframe_ready_never_drops` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X108_stop_midframe_ready_never_drops.md) |
+| ✅ | 109 | `X109_stop_during_long_frame_then_second_header` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X109_stop_during_long_frame_then_second_header.md) |
+| ✅ | 110 | `X110_stop_during_short_frame_then_second_header` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X110_stop_during_short_frame_then_second_header.md) |
+| ✅ | 111 | `X111_stop_then_illegal_ctrl_then_idle` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X111_stop_then_illegal_ctrl_then_idle.md) |
+| ✅ | 112 | `X112_stop_then_runprepare_before_eop` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X112_stop_then_runprepare_before_eop.md) |
+| ✅ | 113 | `X113_stop_then_sync_without_idle` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X113_stop_then_sync_without_idle.md) |
+| ✅ | 114 | `X114_stop_then_running_reopen_window` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X114_stop_then_running_reopen_window.md) |
+| ✅ | 115 | `X115_emulator_mismatch_repro_openframe_only` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X115_emulator_mismatch_repro_openframe_only.md) |
+| ✅ | 116 | `X116_emulator_mismatch_repro_postedge_header` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X116_emulator_mismatch_repro_postedge_header.md) |
+| ✅ | 117 | `X117_termination_gap_signature_regression` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X117_termination_gap_signature_regression.md) |
+| ✅ | 118 | `X118_cfgC_channel_width1_invalid_channel_drive` | stmt=95.19, branch=89.33, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=37.57 | [case](../cases/X118_cfgC_channel_width1_invalid_channel_drive.md) |
+| ✅ | 119 | `X119_cfgD_channel_width8_random_wide_values` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=49.14 | [case](../cases/X119_cfgD_channel_width8_random_wide_values.md) |
+| ✅ | 120 | `X120_cfgE_addrwidth1_highaddr_alias_misuse` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=49.14 | [case](../cases/X120_cfgE_addrwidth1_highaddr_alias_misuse.md) |
+| ✅ | 121 | `X121_cfgF_addrwidth8_highaddr_abuse` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=49.14 | [case](../cases/X121_cfgF_addrwidth8_highaddr_abuse.md) |
+| ✅ | 122 | `X122_cfgB_modehalt1_abort_assumption_negative` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=49.14 | [case](../cases/X122_cfgB_modehalt1_abort_assumption_negative.md) |
+| ✅ | 123 | `X123_cfgA_modehalt0_hold_assumption_negative` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=49.14 | [case](../cases/X123_cfgA_modehalt0_hold_assumption_negative.md) |
+| ✅ | 124 | `X124_cfgG_debuglv2_functional_delta_negative` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=49.14 | [case](../cases/X124_cfgG_debuglv2_functional_delta_negative.md) |
+| ✅ | 125 | `X125_hw_tcl_readlatency_mismatch_negative` | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=49.14 | [case](../cases/X125_hw_tcl_readlatency_mismatch_negative.md) |
+| ✅ | 126 | `X126_hw_tcl_maxchannel_mismatch_negative` | stmt=95.19, branch=89.33, cond=70.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=53.62 | [case](../cases/X126_hw_tcl_maxchannel_mismatch_negative.md) |
+| ✅ | 127 | `X127_hw_tcl_ctrl_readylatency_assumption_negative` | stmt=95.19, branch=89.33, cond=70.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=53.62 | [case](../cases/X127_hw_tcl_ctrl_readylatency_assumption_negative.md) |
+| ✅ | 128 | `X128_hw_tcl_headerinfo_channelwidth_mismatch` | stmt=95.19, branch=89.33, cond=70.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=53.62 | [case](../cases/X128_hw_tcl_headerinfo_channelwidth_mismatch.md) |
+| ✅ | 129 | `X129_build_matrix_compile_smoke_failfast` | stmt=95.19, branch=89.33, cond=70.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=53.62 | [case](../cases/X129_build_matrix_compile_smoke_failfast.md) |
+| ✅ | 130 | `X130_known_gap_bundle_current_contract` | stmt=95.19, branch=89.33, cond=70.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=53.62 | [case](../cases/X130_known_gap_bundle_current_contract.md) |
 
 ---
 _Back to [dashboard](../../DV_REPORT.md)_

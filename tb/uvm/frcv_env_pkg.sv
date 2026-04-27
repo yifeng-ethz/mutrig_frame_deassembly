@@ -909,22 +909,72 @@ package frcv_env_pkg;
         void'(expected_q.pop_front());
     endtask
 
-    function automatic bit case_has_pending_txn(string case_id);
+    function automatic int unsigned case_pending_depth(string case_id);
+      int unsigned depth;
+
+      depth = 0;
       if (active_txn != null && active_txn.case_id == case_id)
-        return 1'b1;
+        depth++;
       foreach (expected_q[idx]) begin
         if (expected_q[idx].case_id == case_id)
-          return 1'b1;
+          depth++;
       end
-      return 1'b0;
+      return depth;
+    endfunction
+
+    function automatic bit case_has_pending_txn(string case_id);
+      return (case_pending_depth(case_id) != 0);
     endfunction
 
     task automatic wait_case_txn_drain(string case_id, int unsigned max_cycles, string ctx);
-      repeat (max_cycles) begin
+      int unsigned stall_cycles;
+      int unsigned pending_depth;
+      int unsigned last_pending_depth;
+      int unsigned last_completed_txn_count;
+      int unsigned last_header_count;
+      int unsigned last_hit_count;
+      int unsigned last_real_eop_count;
+      int unsigned last_endofrun_count;
+
+      stall_cycles = 0;
+      last_pending_depth = case_pending_depth(case_id);
+      last_completed_txn_count = completed_txn_count;
+      last_header_count = header_count;
+      last_hit_count = hit_count;
+      last_real_eop_count = real_eop_count;
+      last_endofrun_count = endofrun_count;
+
+      while (case_has_pending_txn(case_id)) begin
+        @(posedge dbg_vif.clk);
         if (!case_has_pending_txn(case_id))
           return;
-        @(posedge dbg_vif.clk);
+
+        pending_depth = case_pending_depth(case_id);
+        if (pending_depth != last_pending_depth ||
+            completed_txn_count != last_completed_txn_count ||
+            header_count != last_header_count ||
+            hit_count != last_hit_count ||
+            real_eop_count != last_real_eop_count ||
+            endofrun_count != last_endofrun_count) begin
+          stall_cycles = 0;
+        end else begin
+          stall_cycles++;
+        end
+
+        last_pending_depth = pending_depth;
+        last_completed_txn_count = completed_txn_count;
+        last_header_count = header_count;
+        last_hit_count = hit_count;
+        last_real_eop_count = real_eop_count;
+        last_endofrun_count = endofrun_count;
+
+        if (stall_cycles < max_cycles)
+          continue;
+
+        break;
       end
+      if (!case_has_pending_txn(case_id))
+        return;
       `uvm_fatal(
         "FRCV_SCB_TIMEOUT",
         $sformatf(

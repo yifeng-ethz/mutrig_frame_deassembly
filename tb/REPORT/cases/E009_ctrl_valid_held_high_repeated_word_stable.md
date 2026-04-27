@@ -31,6 +31,7 @@
 | ℹ️ | log.hits | `0` |
 | ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 60.48 | n/a | 0.00 | 84.19 | n/a |
-| branch | 34.00 | n/a | 0.00 | 70.00 | n/a |
-| cond | 12.50 | n/a | 0.00 | 50.00 | n/a |
+| stmt | 60.48 | n/a | 0.00 | 84.54 | n/a |
+| branch | 34.00 | n/a | 0.00 | 70.67 | n/a |
+| cond | 12.50 | n/a | 0.00 | 52.50 | n/a |
 | expr | 0.00 | n/a | 0.00 | 98.77 | n/a |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | 1.06 | n/a | 0.00 | 16.11 | n/a |
+| toggle | 1.06 | n/a | 0.00 | 16.34 | n/a |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

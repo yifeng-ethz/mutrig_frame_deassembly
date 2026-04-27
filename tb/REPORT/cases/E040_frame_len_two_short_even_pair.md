@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `0` |
+| ✅ | observed_txn | `1` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E040_frame_len_two_short_even_pair_after_s1.log`](../../uvm/logs/E040_frame_len_two_short_even_pair_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E040_frame_len_two_short_even_pair_s1.ucdb`](../../uvm/cov_after/E040_frame_len_two_short_even_pair_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `1` |
+| ℹ️ | log.hits | `2` |
+| ℹ️ | log.real_eops | `1` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 83.85 | n/a | 3.09 | 92.44 | n/a |
-| branch | 73.33 | n/a | 4.67 | 84.67 | n/a |
-| cond | 45.00 | n/a | 0.00 | 65.00 | n/a |
-| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| stmt | 83.85 | 83.85 | 3.09 | 92.78 | 3.09 |
+| branch | 73.33 | 73.33 | 4.67 | 85.33 | 4.67 |
+| cond | 45.00 | 45.00 | 0.00 | 70.00 | 0.00 |
+| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | 18.95 | n/a | 0.53 | 45.23 | n/a |
+| toggle | 18.95 | 18.95 | 0.53 | 45.89 | 0.53 |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

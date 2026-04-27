@@ -31,6 +31,7 @@
 | ℹ️ | log.hits | `0` |
 | ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 

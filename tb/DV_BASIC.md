@@ -1,5 +1,7 @@
 # DV Basic Cases — mutrig_frame_deassembly
 
+**Companion docs:** [DV_PLAN.md](DV_PLAN.md), [DV_HARNESS.md](DV_HARNESS.md), [DV_CROSS.md](DV_CROSS.md)
+
 **ID Range:** `B001-B130`  
 **Total:** 130 cases  
 **Purpose:** deterministic feature-completion coverage for the present `frame_rcv_ip` contract

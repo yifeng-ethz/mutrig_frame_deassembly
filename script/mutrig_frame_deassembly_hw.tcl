@@ -14,8 +14,6 @@ set IP_DIR $SCRIPT_DIR
 if {[file tail $IP_DIR] eq "script"} {
     set IP_DIR [file dirname $IP_DIR]
 }
-set ICON_FILE [file join $IP_DIR .. quartus_system logo mu3e_logo.png]
-
 set DEFAULT_CHANNEL_WIDTH_CONST    4
 set DEFAULT_CSR_ADDR_WIDTH_CONST   2
 
@@ -53,7 +51,7 @@ set_module_property VERSION                      $VERSION_STRING_DEFAULT_CONST
 set_module_property DESCRIPTION                  "MuTRiG Frame Deassembly Mu3e IP Core"
 set_module_property GROUP                        "Mu3e Data Plane/Modules"
 set_module_property AUTHOR                       "Yifeng Wang"
-set_module_property ICON_PATH                    $ICON_FILE
+set_module_property ICON_PATH                    ../quartus_system/misc/logo/mu3e_logo.png
 set_module_property INTERNAL                     false
 set_module_property OPAQUE_ADDRESS_MAP           true
 set_module_property INSTANTIATE_IN_SYSTEM_MODULE true

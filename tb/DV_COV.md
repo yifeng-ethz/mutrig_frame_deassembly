@@ -1,8 +1,12 @@
-# DV Coverage Summary — mutrig_frame_deassembly
+# DV Coverage Summary — `mutrig_frame_deassembly`
 
 This page is the coverage summary only. Per-case incremental coverage lives under
 [`REPORT/cases/`](REPORT/cases/); per-bucket ordered-merge traces live under
 [`REPORT/buckets/`](REPORT/buckets/).
+
+## Legend
+
+✅ pass / closed &middot; ⚠️ partial / below target &middot; ❌ failed / missing evidence &middot; ❓ pending &middot; ℹ️ informational
 
 ## Targets vs merged totals
 
@@ -11,21 +15,21 @@ This page is the coverage summary only. Per-case incremental coverage lives unde
 | status | metric | merged_pct | target |
 |:---:|---|---|---|
 | ✅ | stmt | 97.94 | 95.0 |
-| ✅ | branch | 94.00 | 90.0 |
+| ✅ | branch | 94.04 | 90.0 |
 | ℹ️ | cond | 85.00 | - |
 | ℹ️ | expr | 98.77 | - |
 | ❓ | fsm_state | n/a | 95.0 |
 | ❓ | fsm_trans | n/a | 90.0 |
-| ⚠️ | toggle | 57.02 | 80.0 |
+| ⚠️ | toggle | 58.14 | 80.0 |
 
 ## Per-bucket merged totals
 
 | status | bucket | stmt | branch | cond | expr | fsm_state | fsm_trans | toggle |
 |:---:|---|---|---|---|---|---|---|---|
 | ⚠️ | [`BASIC`](REPORT/buckets/BASIC.md) | 97.94 | 94.00 | 80.00 | 98.77 | n/a | n/a | 48.60 |
-| ⚠️ | [`EDGE`](REPORT/buckets/EDGE.md) | 95.19 | 89.33 | 70.00 | 98.77 | n/a | n/a | 48.37 |
-| ⚠️ | [`PROF`](REPORT/buckets/PROF.md) | 92.78 | 86.67 | 65.00 | 98.77 | n/a | n/a | 52.29 |
-| ⚠️ | [`ERROR`](REPORT/buckets/ERROR.md) | 95.19 | 89.33 | 67.50 | 98.77 | n/a | n/a | 50.48 |
+| ⚠️ | [`EDGE`](REPORT/buckets/EDGE.md) | 95.53 | 90.00 | 75.00 | 98.77 | n/a | n/a | 48.53 |
+| ⚠️ | [`PROF`](REPORT/buckets/PROF.md) | 94.50 | 88.74 | 72.50 | 98.77 | n/a | n/a | 53.75 |
+| ⚠️ | [`ERROR`](REPORT/buckets/ERROR.md) | 95.19 | 89.33 | 70.00 | 98.77 | n/a | n/a | 53.62 |
 
 ## Continuous-frame baselines by build
 
@@ -33,7 +37,7 @@ This page is the coverage summary only. Per-case incremental coverage lives unde
 
 | status | run_id | kind | build | bucket | case_count | stmt | branch | toggle | functional_cross_pct | txns | ref |
 |:---:|---|---|---|---|---:|---|---|---|---:|---:|---|
-| ✅ | [`all_buckets_frame_cfg_a_fix2`](REPORT/cross/all_buckets_frame_cfg_a_fix2.md) | all_buckets_frame | CFG_A | - | 474 | 96.54 | 91.33 | 59.53 | 68.75 | 775 | - |
+| ✅ | [`all_buckets_frame_cfg_a_fix2`](REPORT/cross/all_buckets_frame_cfg_a_fix2.md) | all_buckets_frame | CFG_A | - | 474 | 97.94 | 94.00 | 60.48 | 96.88 | 1462 | - |
 | ⚠️ | [`all_buckets_frame_cfg_b`](REPORT/cross/all_buckets_frame_cfg_b.md) | all_buckets_frame | CFG_B | - | 25 | 85.16 | 73.51 | 51.51 | 40.62 | 76 | - |
 | ⚠️ | [`all_buckets_frame_cfg_c`](REPORT/cross/all_buckets_frame_cfg_c.md) | all_buckets_frame | CFG_C | - | 6 | 80.16 | 66.23 | 50.58 | 40.62 | 36 | - |
 | ✅ | [`all_buckets_frame_cfg_d`](REPORT/cross/all_buckets_frame_cfg_d.md) | all_buckets_frame | CFG_D | - | 5 | 80.16 | 66.23 | 47.48 | 59.38 | 27 | - |
@@ -53,7 +57,7 @@ This page is the coverage summary only. Per-case incremental coverage lives unde
 | ⚠️ | [`bucket_frame_error_cfg_e`](REPORT/cross/bucket_frame_error_cfg_e.md) | bucket_frame | CFG_E | ERROR | 1 | 80.54 | 64.90 | 16.39 | 34.38 | 1 | - |
 | ⚠️ | [`bucket_frame_error_cfg_f`](REPORT/cross/bucket_frame_error_cfg_f.md) | bucket_frame | CFG_F | ERROR | 1 | 80.16 | 64.90 | 17.67 | 34.38 | 1 | - |
 | ⚠️ | [`bucket_frame_error_cfg_g`](REPORT/cross/bucket_frame_error_cfg_g.md) | bucket_frame | CFG_G | ERROR | 1 | 79.77 | 63.58 | 16.79 | 34.38 | 1 | - |
-| ✅ | [`bucket_frame_prof_cfg_a`](REPORT/cross/bucket_frame_prof_cfg_a.md) | bucket_frame | CFG_A | PROF | 110 | 93.77 | 86.00 | 57.52 | 65.62 | 568 | - |
+| ✅ | [`bucket_frame_prof_cfg_a`](REPORT/cross/bucket_frame_prof_cfg_a.md) | bucket_frame | CFG_A | PROF | 110 | 94.16 | 87.33 | 56.52 | 71.88 | 1157 | - |
 | ⚠️ | [`bucket_frame_prof_cfg_b`](REPORT/cross/bucket_frame_prof_cfg_b.md) | bucket_frame | CFG_B | PROF | 10 | 80.86 | 67.55 | 50.68 | 40.62 | 61 | - |
 | ⚠️ | [`bucket_frame_prof_cfg_c`](REPORT/cross/bucket_frame_prof_cfg_c.md) | bucket_frame | CFG_C | PROF | 2 | 80.16 | 64.24 | 43.95 | 37.5 | 32 | - |
 | ✅ | [`bucket_frame_prof_cfg_d`](REPORT/cross/bucket_frame_prof_cfg_d.md) | bucket_frame | CFG_D | PROF | 3 | 80.16 | 66.23 | 45.98 | 59.38 | 18 | - |

@@ -1,6 +1,6 @@
 # X025_ctrl_valid_low_payload_noise — transaction growth
 
-**Observed txns:** `0`
+**Observed txns:** `1`
 
 <!-- purpose: show how code coverage saturates with transaction count inside one random case. -->
 <!-- source: log-spaced checkpoint UCDBs saved by the test class at txn = 1, 2, 4, 8, ... N. -->

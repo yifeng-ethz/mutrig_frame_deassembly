@@ -1,6 +1,6 @@
-# ❌ P044_mask_toggle_every_16_frames
+# ✅ P044_mask_toggle_every_16_frames
 
-**Bucket:** `PROF` &nbsp; **Method:** `S` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `fail`
+**Bucket:** `PROF` &nbsp; **Method:** `S` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
 
 ## Intent
 
@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ❌ | observed_txn | `0` |
+| ✅ | observed_txn | `8` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/P044_mask_toggle_every_16_frames_after_s1.log`](../../uvm/logs/P044_mask_toggle_every_16_frames_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/P044_mask_toggle_every_16_frames_s1.ucdb`](../../uvm/cov_after/P044_mask_toggle_every_16_frames_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `8` |
+| ℹ️ | log.hits | `8` |
+| ℹ️ | log.real_eops | `8` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | n/a | n/a | n/a | n/a | n/a |
-| branch | n/a | n/a | n/a | n/a | n/a |
-| cond | n/a | n/a | n/a | n/a | n/a |
-| expr | n/a | n/a | n/a | n/a | n/a |
+| stmt | 81.79 | 10.22 | 0.00 | 92.44 | 0.00 |
+| branch | 66.00 | 8.25 | 0.00 | 84.67 | 0.00 |
+| cond | 50.00 | 6.25 | 0.00 | 60.00 | 0.00 |
+| expr | 98.77 | 12.35 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | n/a | n/a | n/a | n/a | n/a |
+| toggle | 35.79 | 4.47 | 0.00 | 50.54 | 0.00 |
 
 ---
 _Back to [bucket](../buckets/PROF.md) &middot; [dashboard](../../DV_REPORT.md)_

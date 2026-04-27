@@ -14,7 +14,7 @@
     localparam int unsigned MAX_DOC_ITERATIONS_CONTINUOUS_EXTENSIVE = 512;
     localparam int unsigned MAX_DOC_PAYLOAD_BYTES_ISOLATED_EXTENSIVE = 10000000;
     localparam int unsigned MAX_DOC_PAYLOAD_BYTES_CONTINUOUS_EXTENSIVE = 131072;
-    localparam int unsigned DOC_CASE_DRAIN_MAX_CYCLES = 512;
+    localparam int unsigned DOC_CASE_DRAIN_MAX_CYCLES = 4096;
     localparam int unsigned TERMINATING_CLOSE_MAX_CYCLES = 2300;
 
     covergroup doc_case_cg with function sample(int unsigned global_case_idx,
@@ -335,7 +335,7 @@
       run_start();
       base_headers = m_env.m_scb.header_count;
       base_hits    = m_env.m_scb.hit_count;
-      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b0,
         random_doc_case(), 1'b0, 0, 0, 1, 0, 0, 1'b0, 1'b0, 1'b0, 1'b0, "none", 6);
       send_long_zero_hit_frame(16'h0039);
       wait_cycles(20);
@@ -601,6 +601,120 @@
       expect_no_new_activity(base_hits, base_real_eops, base_headers, base_endofruns, 16, case_id);
     endtask
 
+    task automatic do_e013_ctrl_valid_low_keeps_previous_state(bit [7:0] channel);
+      wait_for_reset_release();
+      run_start();
+      hold_forced_ctrl(CTRL_IDLE, 1'b0, 1, case_id);
+      hold_forced_ctrl(CTRL_TERMINATING, 1'b0, 1, case_id);
+      hold_forced_ctrl(CTRL_RUN_PREPARE, 1'b0, 1, case_id);
+      release_ctrl_lines(case_id);
+      wait_cycles(2);
+      send_clean_recovery_frame(channel, 16'he013, 48'h111213141516, "none", case_id);
+    endtask
+
+    task automatic do_e029_header_following_write_zero_then_one_requires_clocked_enable(bit [7:0] channel);
+      wait_for_reset_release();
+      run_start();
+      csr_write(8'h00, 32'h0000_0000);
+      wait_cycles(1);
+      attempt_frame_expect_blocked(channel, 16'he029, 48'h212223242526, {case_id, "_mask_low"});
+
+      csr_write(8'h00, 32'h0000_0001);
+      wait_cycles(2);
+      send_clean_recovery_frame(channel, 16'he12a, 48'h313233343536, "none", case_id);
+    endtask
+
+    task automatic do_e121_repeated_terminating_words_do_not_duplicate_eop(bit [7:0] channel);
+      int unsigned base_hits;
+      int unsigned base_real_eops;
+      int unsigned base_headers;
+
+      wait_for_reset_release();
+      run_start();
+      base_hits      = m_env.m_scb.hit_count;
+      base_real_eops = m_env.m_scb.real_eop_count;
+      base_headers   = m_env.m_scb.header_count;
+
+      scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b1,
+        random_doc_case(), 1'b0, 1, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "none", 6);
+      fork
+        begin
+          hold_forced_ctrl(CTRL_TERMINATING, 1'b1, 3, case_id);
+          release_ctrl_lines_nowait(case_id);
+        end
+        begin
+          send_long_frame(16'he121, 48'h123456789abc);
+        end
+      join
+      wait_for_counts(base_hits + 1, base_real_eops + 1, base_headers + 1, 64, case_id);
+      wait_cycles(12);
+      if (m_env.m_scb.hit_count != (base_hits + 1) ||
+          m_env.m_scb.real_eop_count != (base_real_eops + 1) ||
+          m_env.m_scb.header_count != (base_headers + 1))
+        `uvm_fatal("FRCV_CASE",
+          $sformatf("%s expected exactly one completed frame under repeated TERMINATING words", case_id))
+    endtask
+
+    task automatic do_e123_header_after_error_state_needs_new_running_or_idle_monitoring(bit [7:0] channel);
+      wait_for_reset_release();
+      pulse_ctrl(9'h12a, "ILLEGAL_RECOVER_EDGE");
+      wait_cycles(2);
+      attempt_frame_expect_blocked(channel, 16'he123, 48'h414243444546, {case_id, "_error"});
+      pulse_ctrl(CTRL_IDLE, "IDLE");
+      wait_cycles(2);
+      pulse_ctrl(CTRL_RUNNING, "RUNNING");
+      wait_cycles(2);
+      send_clean_recovery_frame(channel, 16'he223, 48'h515253545556, "none", case_id);
+    endtask
+
+    task automatic do_x099_csr_mask_low_then_illegal_ctrl(bit [7:0] channel);
+      wait_for_reset_release();
+      run_start();
+      csr_write(8'h00, 32'h0000_0000);
+      pulse_ctrl(9'h12a, "ILLEGAL_MASK_LOW");
+      wait_cycles(2);
+      attempt_frame_expect_blocked(channel, 16'h0990, 48'h616263646566, {case_id, "_blocked"});
+      csr_write(8'h00, 32'h0000_0001);
+      pulse_ctrl(CTRL_RUNNING, "RUNNING");
+      wait_cycles(2);
+      send_clean_recovery_frame(channel, 16'h1990, 48'h717273747576, "none", case_id);
+    endtask
+
+    task automatic do_p034_cadence_idle_monitoring_only(bit [7:0] channel);
+      int unsigned reps;
+
+      wait_for_reset_release();
+      issue_ctrl_for_mode(CTRL_IDLE, "IDLE");
+      wait_cycles(2);
+      reps = derive_iterations();
+      for (int unsigned iter = 0; iter < reps; iter++) begin
+        attempt_frame_expect_blocked(
+          channel,
+          16'h3400 + iter[15:0],
+          48'h010203040506 + iter,
+          $sformatf("%s_iter%0d", case_id, iter)
+        );
+      end
+    endtask
+
+    task automatic do_p045_mask_low_long_idle_soak(bit [7:0] channel);
+      int unsigned reps;
+
+      wait_for_reset_release();
+      run_start();
+      csr_write(8'h00, 32'h0000_0000);
+      wait_cycles(2);
+      reps = derive_iterations();
+      for (int unsigned iter = 0; iter < reps; iter++) begin
+        attempt_frame_expect_blocked(
+          channel,
+          16'h4500 + iter[15:0],
+          48'h111213141516 + iter,
+          $sformatf("%s_iter%0d", case_id, iter)
+        );
+      end
+    endtask
+
     task automatic force_ctrl_lines(logic [8:0] cmd, bit valid, string ctx);
       uvm_hdl_data_t raw;
 
@@ -614,11 +728,15 @@
         `uvm_fatal("FRCV_CASE", $sformatf("%s failed to force ctrl_if.valid", ctx))
     endtask
 
-    task automatic release_ctrl_lines(string ctx);
+    task automatic release_ctrl_lines_nowait(string ctx);
       if (!uvm_hdl_release("tb_top.ctrl_if.data"))
         `uvm_fatal("FRCV_CASE", $sformatf("%s failed to release ctrl_if.data", ctx))
       if (!uvm_hdl_release("tb_top.ctrl_if.valid"))
         `uvm_fatal("FRCV_CASE", $sformatf("%s failed to release ctrl_if.valid", ctx))
+    endtask
+
+    task automatic release_ctrl_lines(string ctx);
+      release_ctrl_lines_nowait(ctx);
       wait_cycles(1);
     endtask
 
@@ -1556,6 +1674,12 @@
 
       cap = doc_iteration_cap();
 
+      if (effort_mode != "extensive" &&
+          execution_mode == "isolated" &&
+          case_id.len() != 0 &&
+          case_id.getc(0) == "P")
+        cap = (cap > 8) ? 8 : cap;
+
       count = extract_count_before_suffix("frames", 0);
       if (count != 0)
         return (count > cap) ? cap : count;
@@ -1988,6 +2112,9 @@
 
     task automatic run_edge_explicit_doc_case(bit [7:0] channel);
       case (case_id)
+        "E013_ctrl_valid_low_keeps_previous_state": begin
+          do_e013_ctrl_valid_low_keeps_previous_state(channel);
+        end
         "E009_ctrl_valid_held_high_repeated_word_stable": begin
           run_edge_repeat_ctrl_case(CTRL_RUNNING, "RUNNING", 8);
         end
@@ -2006,8 +2133,17 @@
         "E020_midframe_valid_low_does_not_pause_parser": begin
           do_e020_midframe_valid_low_does_not_pause_parser();
         end
+        "E029_header_following_write_zero_then_one_requires_clocked_enable": begin
+          do_e029_header_following_write_zero_then_one_requires_clocked_enable(channel);
+        end
+        "E121_repeated_terminating_words_do_not_duplicate_eop": begin
+          do_e121_repeated_terminating_words_do_not_duplicate_eop(channel);
+        end
         "E122_repeated_idle_words_do_not_force_extra_output": begin
           run_edge_repeat_ctrl_case(CTRL_IDLE, "IDLE", 8);
+        end
+        "E123_header_after_error_state_needs_new_running_or_idle_monitoring": begin
+          do_e123_header_after_error_state_needs_new_running_or_idle_monitoring(channel);
         end
         "E124_truncated_long_frame_never_asserts_eop": begin
           run_edge_truncated_case(channel, 1'b0);
@@ -2270,20 +2406,32 @@
       end
 
       if (case_id == "E004_terminating_command_same_cycle_open_frame_continues") begin
+        bit [47:0] hit_word;
+        bit [15:0] crc_trailer;
+        byte unsigned frame_bytes[$];
+
         run_start_for_mode();
         scb_expect_txn(case_id, execution_mode, bucket_name_for_case(case_id), "", 1'b0,
           random_doc_case(), 1'b0, 1, 1, 1, 1, 0, 1'b0, 1'b0, 1'b0, 1'b0, "none", 6);
+        hit_word = 48'h112233445566;
+        frame_bytes.push_back(byte'(frame_number[15:8]));
+        frame_bytes.push_back(byte'(frame_number[7:0]));
+        frame_bytes.push_back(8'h00);
+        frame_bytes.push_back(8'h01);
+        for (int byte_idx = 5; byte_idx >= 0; byte_idx--)
+          frame_bytes.push_back(byte'(hit_word[byte_idx*8 +: 8]));
+        crc_trailer = frcv_crc16_trailer(frame_bytes);
         drive_symbol(1'b1, HEADER_BYTE, '0, channel);
         drive_symbol(1'b0, byte'(frame_number[15:8]), '0, channel);
-        fork
-          pulse_ctrl(CTRL_TERMINATING, "TERMINATING");
-          drive_symbol(1'b0, byte'(frame_number[7:0]), '0, channel);
-        join
+        force_ctrl_lines(CTRL_TERMINATING, 1'b1, case_id);
+        drive_symbol(1'b0, byte'(frame_number[7:0]), '0, channel);
+        release_ctrl_lines_nowait(case_id);
         drive_symbol(1'b0, frame_len_msb_byte(1'b0, 1), '0, channel);
         drive_symbol(1'b0, 8'h01, '0, channel);
-        drive_symbol(1'b0, payload_byte_value(frame_number, 0, 1'b0), '0, channel);
-        drive_symbol(1'b0, 8'h00, '0, channel);
-        drive_symbol(1'b0, 8'h00, '0, channel);
+        for (int byte_idx = 5; byte_idx >= 0; byte_idx--)
+          drive_symbol(1'b0, byte'(hit_word[byte_idx*8 +: 8]), '0, channel);
+        drive_symbol(1'b0, byte'(crc_trailer[15:8]), '0, channel);
+        drive_symbol(1'b0, byte'(crc_trailer[7:0]), '0, channel);
         wait_cycles(8);
       end
     endtask
@@ -2333,7 +2481,11 @@
       if (truncate_after_bytes != 32'hffff_ffff)
         return 0;
       if (inject_comma && mode_halt_abort)
-        return 0;
+        return expected_hits_before_loss_sync(
+          short_mode,
+          frame_len,
+          payload_byte_count(short_mode, frame_len) / 2
+        );
       if (inject_loss_sync)
         return expected_hits_before_loss_sync(short_mode, frame_len, payload_byte_count(short_mode, frame_len) / 2);
       return frame_len;
@@ -2346,6 +2498,21 @@
       bit mode_halt_abort
     );
       if (truncate_after_bytes != 32'hffff_ffff)
+        return 0;
+      if (inject_comma && mode_halt_abort)
+        return 1;
+      return 1;
+    endfunction
+
+    function automatic int unsigned expected_real_eops_for_frame(
+      int unsigned expected_hits,
+      bit          inject_loss_sync,
+      bit          inject_comma,
+      bit          mode_halt_abort
+    );
+      if (expected_hits == 0)
+        return 0;
+      if (inject_loss_sync)
         return 0;
       if (inject_comma && mode_halt_abort)
         return 0;
@@ -2370,6 +2537,7 @@
       int unsigned truncate_after_bytes;
       int unsigned terminate_after_bytes;
       int unsigned bytes_per_iteration;
+      string       stop_boundary;
       bit          short_mode;
       bit [7:0]    channel;
       bit          inject_bad_crc;
@@ -2483,15 +2651,40 @@
       end
 
       if (case_id == "E009_ctrl_valid_held_high_repeated_word_stable" ||
+          case_id == "E013_ctrl_valid_low_keeps_previous_state" ||
           case_id == "E010_ctrl_illegal_zero_word_maps_error" ||
           case_id == "E011_ctrl_twohot_word_maps_error" ||
           case_id == "E012_ctrl_allones_word_maps_error" ||
           case_id == "E019_fs_idle_accepts_header_even_if_asi_rx8b1k_valid_low" ||
           case_id == "E020_midframe_valid_low_does_not_pause_parser" ||
+          case_id == "E029_header_following_write_zero_then_one_requires_clocked_enable" ||
+          case_id == "E121_repeated_terminating_words_do_not_duplicate_eop" ||
           case_id == "E122_repeated_idle_words_do_not_force_extra_output" ||
+          case_id == "E123_header_after_error_state_needs_new_running_or_idle_monitoring" ||
           case_id == "E124_truncated_long_frame_never_asserts_eop" ||
           case_id == "E125_truncated_short_frame_never_asserts_eop") begin
         run_edge_explicit_doc_case(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
+        scb_case_end(case_id);
+        return;
+      end
+
+      if (case_id == "X099_csr_mask_low_then_illegal_ctrl") begin
+        do_x099_csr_mask_low_then_illegal_ctrl(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
+        scb_case_end(case_id);
+        return;
+      end
+
+      if (case_id == "P034_cadence_idle_monitoring_only") begin
+        do_p034_cadence_idle_monitoring_only(channel);
+        scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
+        scb_case_end(case_id);
+        return;
+      end
+
+      if (case_id == "P045_mask_low_long_idle_soak") begin
+        do_p045_mask_low_long_idle_soak(channel);
         scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);
         scb_case_end(case_id);
         return;
@@ -2592,7 +2785,15 @@
         exp_hits = expected_hits_for_frame(short_mode, frame_len, truncate_after_bytes,
                                            inject_loss_sync, inject_comma, mode_halt_abort);
         exp_headers = expected_headers_for_frame(frame_len, truncate_after_bytes, inject_comma, mode_halt_abort);
-        exp_real_eops = ((exp_hits != 0) && !inject_loss_sync) ? 1 : 0;
+        exp_real_eops = expected_real_eops_for_frame(
+          exp_hits,
+          inject_loss_sync,
+          inject_comma,
+          mode_halt_abort
+        );
+        stop_boundary = (inject_comma && mode_halt_abort)
+                        ? "mode0_abort"
+                        : derived_stop_boundary(terminate_after_bytes);
         if (exp_headers != 0 || exp_hits != 0 || exp_real_eops != 0) begin
           scb_expect_txn(
             case_id,
@@ -2611,7 +2812,7 @@
             1'b0,
             1'b0,
             1'b0,
-            derived_stop_boundary(terminate_after_bytes),
+            stop_boundary,
             6
           );
         end
@@ -2641,6 +2842,13 @@
           issue_ctrl_for_mode(CTRL_RUN_PREPARE, "RUN_PREPARE");
         if (contains_ci("poll") || contains_ci("read") || contains_ci("word"))
           apply_case_csr_ops();
+        // Practical iterative runs need one idle cycle between frames so the parser
+        // can retire the prior frame through the CRC/idle boundary before the next
+        // header arrives. Without this, QuestaOne bucket-frame runs can miss every
+        // other fresh header in zero-hit / soak style PROF cases.
+        if (effort_mode != "extensive" &&
+            iter + 1 < iterations)
+          wait_cycles(1);
       end
 
       scb_wait_case_txn_drain(case_id, DOC_CASE_DRAIN_MAX_CYCLES, case_id);

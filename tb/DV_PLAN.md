@@ -5,7 +5,7 @@
 **Primary RTL:** `rtl/frame_rcv_ip.vhd`  
 **Date:** 2026-04-15  
 **Methodology:** Phase-0 DV planning per the local Codex `dv-workflow` and the Claude `dv-workflow` guidance  
-**Status:** Planning package for harness implementation signoff
+**Status:** Implemented and maintained signoff plan; current QuestaOne reruns are used as the active evidence baseline
 
 ## 1. Scope
 

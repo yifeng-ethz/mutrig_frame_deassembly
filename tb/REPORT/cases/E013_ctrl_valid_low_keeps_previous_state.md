@@ -1,6 +1,6 @@
-# ❌ E013_ctrl_valid_low_keeps_previous_state
+# ✅ E013_ctrl_valid_low_keeps_previous_state
 
-**Bucket:** `EDGE` &nbsp; **Method:** `D` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `fail`
+**Bucket:** `EDGE` &nbsp; **Method:** `D` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
 
 ## Intent
 
@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ❌ | observed_txn | `0` |
+| ✅ | observed_txn | `1` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E013_ctrl_valid_low_keeps_previous_state_after_s1.log`](../../uvm/logs/E013_ctrl_valid_low_keeps_previous_state_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E013_ctrl_valid_low_keeps_previous_state_s1.ucdb`](../../uvm/cov_after/E013_ctrl_valid_low_keeps_previous_state_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `1` |
+| ℹ️ | log.hits | `1` |
+| ℹ️ | log.real_eops | `1` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | n/a | n/a | n/a | n/a | n/a |
-| branch | n/a | n/a | n/a | n/a | n/a |
-| cond | n/a | n/a | n/a | n/a | n/a |
-| expr | n/a | n/a | n/a | n/a | n/a |
+| stmt | 81.44 | 81.44 | 0.00 | 85.57 | 0.00 |
+| branch | 65.33 | 65.33 | 0.00 | 72.00 | 0.00 |
+| cond | 45.00 | 45.00 | 0.00 | 52.50 | 0.00 |
+| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | n/a | n/a | n/a | n/a | n/a |
+| toggle | 13.27 | 13.27 | 0.17 | 17.07 | 0.17 |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

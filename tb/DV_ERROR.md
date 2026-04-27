@@ -1,5 +1,7 @@
 # DV Error / Negative Cases — mutrig_frame_deassembly
 
+**Companion docs:** [DV_PLAN.md](DV_PLAN.md), [DV_HARNESS.md](DV_HARNESS.md), [DV_CROSS.md](DV_CROSS.md)
+
 **ID Range:** `X001-X130`  
 **Total:** 130 cases  
 **Purpose:** reset, malformed-input, illegal-control, and contract-violation coverage for the current `frame_rcv_ip` implementation

@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `0` |
+| ✅ | observed_txn | `1` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/B028_csr_read_addr2_frame_counter_after_s1.log`](../../uvm/logs/B028_csr_read_addr2_frame_counter_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/B028_csr_read_addr2_frame_counter_s1.ucdb`](../../uvm/cov_after/B028_csr_read_addr2_frame_counter_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `1` |
+| ℹ️ | log.hits | `1` |
+| ℹ️ | log.real_eops | `1` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 82.13 | n/a | 0.34 | 89.69 | n/a |
-| branch | 66.67 | n/a | 0.67 | 78.67 | n/a |
-| cond | 45.00 | n/a | 0.00 | 62.50 | n/a |
-| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| stmt | 82.13 | 82.13 | 0.34 | 89.69 | 0.34 |
+| branch | 66.67 | 66.67 | 0.67 | 78.67 | 0.67 |
+| cond | 45.00 | 45.00 | 0.00 | 62.50 | 0.00 |
+| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | 14.33 | n/a | 0.76 | 18.59 | n/a |
+| toggle | 14.33 | 14.33 | 0.76 | 18.59 | 0.76 |
 
 ---
 _Back to [bucket](../buckets/BASIC.md) &middot; [dashboard](../../DV_REPORT.md)_

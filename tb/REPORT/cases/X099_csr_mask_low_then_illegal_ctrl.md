@@ -1,6 +1,6 @@
-# ❌ X099_csr_mask_low_then_illegal_ctrl
+# ✅ X099_csr_mask_low_then_illegal_ctrl
 
-**Bucket:** `ERROR` &nbsp; **Method:** `F` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `fail`
+**Bucket:** `ERROR` &nbsp; **Method:** `F` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
 
 ## Intent
 
@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ❌ | observed_txn | `0` |
+| ✅ | observed_txn | `1` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/X099_csr_mask_low_then_illegal_ctrl_after_s1.log`](../../uvm/logs/X099_csr_mask_low_then_illegal_ctrl_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/X099_csr_mask_low_then_illegal_ctrl_s1.ucdb`](../../uvm/cov_after/X099_csr_mask_low_then_illegal_ctrl_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `1` |
+| ℹ️ | log.hits | `1` |
+| ℹ️ | log.real_eops | `1` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | n/a | n/a | n/a | n/a | n/a |
-| branch | n/a | n/a | n/a | n/a | n/a |
-| cond | n/a | n/a | n/a | n/a | n/a |
-| expr | n/a | n/a | n/a | n/a | n/a |
+| stmt | 82.47 | 82.47 | 0.00 | 95.19 | 0.00 |
+| branch | 66.67 | 66.67 | 0.00 | 89.33 | 0.00 |
+| cond | 47.50 | 47.50 | 2.50 | 65.00 | 2.50 |
+| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | n/a | n/a | n/a | n/a | n/a |
+| toggle | 13.60 | 13.60 | 0.30 | 37.07 | 0.30 |
 
 ---
 _Back to [bucket](../buckets/ERROR.md) &middot; [dashboard](../../DV_REPORT.md)_

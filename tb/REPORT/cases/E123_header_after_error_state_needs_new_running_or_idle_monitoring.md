@@ -1,6 +1,6 @@
-# ❌ E123_header_after_error_state_needs_new_running_or_idle_monitoring
+# ✅ E123_header_after_error_state_needs_new_running_or_idle_monitoring
 
-**Bucket:** `EDGE` &nbsp; **Method:** `D` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `fail`
+**Bucket:** `EDGE` &nbsp; **Method:** `D` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
 
 ## Intent
 
@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ❌ | observed_txn | `0` |
+| ✅ | observed_txn | `1` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E123_header_after_error_state_needs_new_running_or_idle_monitoring_after_s1.log`](../../uvm/logs/E123_header_after_error_state_needs_new_running_or_idle_monitoring_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E123_header_after_error_state_needs_new_running_or_idle_monitoring_s1.ucdb`](../../uvm/cov_after/E123_header_after_error_state_needs_new_running_or_idle_monitoring_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `1` |
+| ℹ️ | log.hits | `1` |
+| ℹ️ | log.real_eops | `1` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | n/a | n/a | n/a | n/a | n/a |
-| branch | n/a | n/a | n/a | n/a | n/a |
-| cond | n/a | n/a | n/a | n/a | n/a |
-| expr | n/a | n/a | n/a | n/a | n/a |
+| stmt | 79.38 | 79.38 | 0.00 | 95.53 | 0.00 |
+| branch | 62.67 | 62.67 | 0.00 | 90.00 | 0.00 |
+| cond | 37.50 | 37.50 | 0.00 | 75.00 | 0.00 |
+| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | n/a | n/a | n/a | n/a | n/a |
+| toggle | 13.37 | 13.37 | 0.00 | 48.37 | 0.00 |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

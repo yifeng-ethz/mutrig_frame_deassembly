@@ -1,5 +1,7 @@
 # DV Edge Cases — mutrig_frame_deassembly
 
+**Companion docs:** [DV_PLAN.md](DV_PLAN.md), [DV_HARNESS.md](DV_HARNESS.md), [DV_CROSS.md](DV_CROSS.md)
+
 **ID Range:** `E001-E130`  
 **Total:** 130 cases  
 **Purpose:** boundary, corner, and contract-edge coverage for parser control, framing, counters, and termination

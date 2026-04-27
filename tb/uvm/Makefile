@@ -1,25 +1,12 @@
-QUESTA_HOME ?= /data1/intelFPGA_pro/23.1/questa_fse
-VLIB        = $(QUESTA_HOME)/bin/vlib
-VMAP        = $(QUESTA_HOME)/bin/vmap
-VCOM        = $(QUESTA_HOME)/bin/vcom
-VLOG        = $(QUESTA_HOME)/bin/vlog
-VSIM        = $(QUESTA_HOME)/bin/vsim
-VCOVER      = $(QUESTA_HOME)/bin/vcover
-LMUTIL      = $(QUESTA_HOME)/linux_x86_64/lmutil
-
-QUESTA_LICENSE := $(QUESTA_HOME)/LR-287689_License.dat
-ETH_LIC_SERVER := 8161@lic-mentor.ethz.ch
-
-export LM_LICENSE_FILE   := $(ETH_LIC_SERVER):$(QUESTA_LICENSE)
-export MGLS_LICENSE_FILE := $(LM_LICENSE_FILE)
+include ../../../scripts/questa_one.mk
 
 UVM_DIR       := $(abspath .)
 IP_SRC        := $(abspath ../..)
 LOG_DIR       := $(UVM_DIR)/logs
 COV_DIR       = $(UVM_DIR)/cov_$(RTL_VARIANT)
-UVM_HOME      ?= $(abspath $(QUESTA_HOME)/verilog_src/uvm-1.2)
+UVM_HOME      ?= $(QUESTA_UVM_HOME)
 UVM_SRC       := $(UVM_HOME)/src
-UVM_DPI_SO    := $(firstword $(wildcard $(QUESTA_HOME)/uvm-1.2/linux_x86_64/uvm_dpi.so $(QUESTA_HOME)/verilog_src/uvm-1.2/linux_x86_64/uvm_dpi.so))
+UVM_DPI_SO    := $(QUESTA_UVM_DPI_SO)
 UVM_DPI_LIB   := $(basename $(UVM_DPI_SO))
 DPI_CPP       ?= /usr/bin/gcc
 
@@ -28,11 +15,33 @@ TEST        ?= COMBO_FRCV_001_run_contract_test
 CASE_ID     ?=
 BUCKET_FRAME_TEST ?= COMBO_FRCV_001_run_contract_test
 ALL_BUCKETS_FRAME_TEST ?= COMBO_FRCV_001_run_contract_test
-CHANNEL_WIDTH ?= 4
-CSR_ADDR_WIDTH ?= 2
-MODE_HALT ?= 0
-DEBUG_LV ?= 0
 BUILD_TAG ?= CFG_A
+BUILD_CHANNEL_WIDTH := 4
+BUILD_CSR_ADDR_WIDTH := 2
+BUILD_MODE_HALT := 0
+BUILD_DEBUG_LV := 0
+ifeq ($(BUILD_TAG),CFG_B)
+BUILD_MODE_HALT := 1
+endif
+ifeq ($(BUILD_TAG),CFG_C)
+BUILD_CHANNEL_WIDTH := 1
+endif
+ifeq ($(BUILD_TAG),CFG_D)
+BUILD_CHANNEL_WIDTH := 8
+endif
+ifeq ($(BUILD_TAG),CFG_E)
+BUILD_CSR_ADDR_WIDTH := 1
+endif
+ifeq ($(BUILD_TAG),CFG_F)
+BUILD_CSR_ADDR_WIDTH := 8
+endif
+ifeq ($(BUILD_TAG),CFG_G)
+BUILD_DEBUG_LV := 2
+endif
+CHANNEL_WIDTH ?= $(BUILD_CHANNEL_WIDTH)
+CSR_ADDR_WIDTH ?= $(BUILD_CSR_ADDR_WIDTH)
+MODE_HALT ?= $(BUILD_MODE_HALT)
+DEBUG_LV ?= $(BUILD_DEBUG_LV)
 EXTRA_PLUSARGS ?=
 RUN_ID_OVERRIDE ?=
 WORK_SUFFIX ?=
@@ -65,9 +74,9 @@ UVM_SRCS = \
 .PHONY: license_check compile run run_sim run_case run_case_list run_cross run_isolated run_bucket_frame run_all_buckets_frame cov_report_case cov_merge cov_report_total run_before_expected_fail run_after prove_delta clean
 
 license_check:
-	@echo "═══ Checking Mentor floating license at $(ETH_LIC_SERVER) ═══"
-	@$(LMUTIL) lmstat -f mtiverification -c $(ETH_LIC_SERVER) >/dev/null 2>&1 || \
-	  { echo "ERROR: mtiverification feature not visible via $(ETH_LIC_SERVER)"; exit 1; }
+	@echo "═══ Checking Mentor floating license at $(QUESTA_LICENSE_SERVER) ═══"
+	@$(LMUTIL) lmstat -f mtiverification -c $(QUESTA_LICENSE_SERVER) >/dev/null 2>&1 || \
+	  { echo "ERROR: mtiverification feature not visible via $(QUESTA_LICENSE_SERVER)"; exit 1; }
 
 compile: license_check $(WORK_DIR)/.compiled
 
@@ -75,11 +84,12 @@ $(WORK_DIR)/.compiled: $(RTL_DIR)/crc16_calc.vhd $(RTL_DIR)/frame_rcv_ip.vhd $(U
 	@echo "═══ Compiling frame_rcv_ip UVM bench ($(RTL_VARIANT)) cfg=$(TB_CFG_TAG) build=$(BUILD_TAG) ═══"
 	@rm -rf $(WORK_DIR)
 	@mkdir -p $(WORK_DIR) $(BUILD_DIR) $(LOG_DIR) $(COV_DIR)
+	@cp $(QSIM_INI) $(WORK_DIR)/modelsim.ini
+	@chmod u+w $(WORK_DIR)/modelsim.ini
 	@if [ "$(RTL_VARIANT)" = "before" ]; then \
 	  git -C $(IP_SRC) show HEAD:$(RTL_HEAD_PATH) > $(BUILD_DIR)/frame_rcv_ip.vhd; \
 	fi
 	@cd $(WORK_DIR) && $(VLIB) work
-	@cd $(WORK_DIR) && $(VMAP) -c > /dev/null
 	@cd $(WORK_DIR) && $(VMAP) -modelsimini modelsim.ini work work > /dev/null
 	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini modelsim.ini -work work $(RTL_DIR)/crc16_calc.vhd
 	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini modelsim.ini -work work $(RTL_SRC)

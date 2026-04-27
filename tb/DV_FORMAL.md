@@ -45,17 +45,18 @@ Added in the current tree:
 - `tb/formal/frcv_formal_top.sv`
   - mixed-language formal harness around the wrapper plus the active SVA
 - `tb/formal/oss/crc16_calc_residue.sby`
-  - `/data1` OSS formal proof of the standalone CRC residue contract
+  - historical OSS proof artifact for the standalone CRC residue contract
 - `tb/formal/oss/frame_rcv_ip_crc_counter.sby`
-  - `/data1` OSS bounded proof that a bad-CRC frame retires with one CSR counter increment
+  - historical OSS proof artifact for the bad-CRC counter contract
 
 Current environment note:
 
-- `qverify` / PropCheck is not on `PATH` in this workspace as of 2026-04-18
-- the active formal flow in this repo is the `/data1/oss_formal` stack
-- current checkpoints:
-  - `make -C tb/formal oss_crc_prove` = PASS by k-induction
-  - `make -C tb/formal oss_dut_crc_counter_prove` = PASS as bounded BMC over the scripted bad-CRC frame scenario
+- the intended formal backend is now Questa `qverify` / `znformal` under
+  `/data1/questaone_sim/questasim`
+- as of **2026-04-21**, `qverify` / `znformal` is still not present under the
+  active QuestaOne tree on this host, so real proof execution remains blocked
+- the checked-in OSS `.sby` artifacts remain historical evidence only and are
+  no longer the active signoff path
 
 ## 2. Seven-step packet method mapped to this DUT
 
@@ -138,7 +139,7 @@ for the IP.
 | B4 | long-hit byte collection -> emitted hit word | `FS_UNPACK` long path | catches 6-byte packing and `sop/eop` off-by-one errors | `frcv_output_contract_sva` |
 | B5 | short-hit byte/nibble collection -> emitted hit word | `FS_UNPACK` + `FS_UNPACK_EXTRA` short path | catches nibble-sharing bugs and odd/even hit boundary mistakes | `frcv_output_contract_sva` |
 | B6 | parser next-state hit pulse -> registered `hit_type0` outputs | `n_new_word`, `proc_output_pkt_hits*` | exact "between processes" packet contract | `frcv_output_contract_sva` |
-| B7 | CRC check result -> output CRC sideband + CRC counter | `FS_CRC_CHECK`, `n_crc_error`, `p_crc_err_count` | proves CRC indication and counting are coherent across the process boundary | `frcv_output_contract_sva`, `frcv_counter_contract_sva`, `tb/formal/oss/frame_rcv_ip_crc_counter.sby` |
+| B7 | CRC check result -> output CRC sideband + CRC counter | `FS_CRC_CHECK`, `n_crc_error`, `p_crc_err_count` | proves CRC indication and counting are coherent across the process boundary | `frcv_output_contract_sva`, `frcv_counter_contract_sva`, historical `tb/formal/oss/frame_rcv_ip_crc_counter.sby` |
 | B8 | SOP/EOP outputs -> frame counters | `proc_avmm_slave_csr` | proves scoreboard/accounting path matches markers | `frcv_counter_contract_sva` |
 | B9 | TERMINATING delayed-tail admit -> end-of-run pulse | `terminating_pending`, `terminating_frame_start_seen`, `terminating_empty_frame_done` | known high-risk closure path from recent bug fixes | wrapper ready, formal property backlog |
 
@@ -230,7 +231,7 @@ Mandatory properties:
 - no decrement or multi-step jump is allowed
 
 Implemented today in `frcv_output_contract_sva`, `frcv_counter_contract_sva`,
-and the bounded OSS proof `frame_rcv_ip_crc_counter.sby`.
+and the historical bounded OSS proof `frame_rcv_ip_crc_counter.sby`.
 
 ### 5.8 B8: frame counter boundary
 

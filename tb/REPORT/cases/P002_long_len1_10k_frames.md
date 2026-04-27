@@ -1,6 +1,6 @@
-# ❌ P002_long_len1_10k_frames
+# ✅ P002_long_len1_10k_frames
 
-**Bucket:** `PROF` &nbsp; **Method:** `S` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `fail`
+**Bucket:** `PROF` &nbsp; **Method:** `S` &nbsp; **Build:** `CFG_A` &nbsp; **Effort:** `practical` &nbsp; **Result:** `pass`
 
 ## Intent
 
@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ❌ | observed_txn | `0` |
+| ✅ | observed_txn | `8` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/P002_long_len1_10k_frames_after_s1.log`](../../uvm/logs/P002_long_len1_10k_frames_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/P002_long_len1_10k_frames_s1.ucdb`](../../uvm/cov_after/P002_long_len1_10k_frames_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `8` |
+| ℹ️ | log.hits | `8` |
+| ℹ️ | log.real_eops | `8` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | n/a | n/a | n/a | n/a | n/a |
-| branch | n/a | n/a | n/a | n/a | n/a |
-| cond | n/a | n/a | n/a | n/a | n/a |
-| expr | n/a | n/a | n/a | n/a | n/a |
+| stmt | 81.79 | 10.22 | 6.53 | 81.79 | 0.82 |
+| branch | 66.00 | 8.25 | 14.00 | 66.00 | 1.75 |
+| cond | 50.00 | 6.25 | 10.00 | 50.00 | 1.25 |
+| expr | 98.77 | 12.35 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | n/a | n/a | n/a | n/a | n/a |
+| toggle | 34.57 | 4.32 | 22.52 | 35.33 | 2.81 |
 
 ---
 _Back to [bucket](../buckets/PROF.md) &middot; [dashboard](../../DV_REPORT.md)_

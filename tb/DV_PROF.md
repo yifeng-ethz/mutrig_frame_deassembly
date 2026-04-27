@@ -1,5 +1,7 @@
 # DV Performance / Stress Cases — mutrig_frame_deassembly
 
+**Companion docs:** [DV_PLAN.md](DV_PLAN.md), [DV_HARNESS.md](DV_HARNESS.md), [DV_CROSS.md](DV_CROSS.md)
+
 **ID Range:** `P001-P130`  
 **Total:** 130 cases  
 **Purpose:** sustained traffic, soak, sweep, and long-run stability coverage for the current `frame_rcv_ip` contract

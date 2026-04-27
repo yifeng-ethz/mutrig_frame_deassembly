@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `0` |
+| ✅ | observed_txn | `1` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E103_crc_counter_read_on_bad_eop_cycle_returns_preincremented_value_after_s1.log`](../../uvm/logs/E103_crc_counter_read_on_bad_eop_cycle_returns_preincremented_value_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E103_crc_counter_read_on_bad_eop_cycle_returns_preincremented_value_s1.ucdb`](../../uvm/cov_after/E103_crc_counter_read_on_bad_eop_cycle_returns_preincremented_value_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `1` |
+| ℹ️ | log.hits | `1` |
+| ℹ️ | log.real_eops | `1` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 82.13 | n/a | 0.34 | 95.19 | n/a |
-| branch | 66.67 | n/a | 0.67 | 89.33 | n/a |
-| cond | 45.00 | n/a | 0.00 | 70.00 | n/a |
-| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| stmt | 82.13 | 82.13 | 0.34 | 95.53 | 0.34 |
+| branch | 66.67 | 66.67 | 0.67 | 90.00 | 0.67 |
+| cond | 45.00 | 45.00 | 0.00 | 75.00 | 0.00 |
+| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | 14.36 | n/a | 0.00 | 47.64 | n/a |
+| toggle | 14.36 | 14.36 | 0.00 | 48.30 | 0.00 |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

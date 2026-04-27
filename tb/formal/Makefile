@@ -1,16 +1,6 @@
-QUESTA_HOME ?= /data1/intelFPGA_pro/23.1/questa_fse
-VLIB        = $(QUESTA_HOME)/bin/vlib
-VMAP        = $(QUESTA_HOME)/bin/vmap
-VCOM        = $(QUESTA_HOME)/bin/vcom
-VLOG        = $(QUESTA_HOME)/bin/vlog
-OSS_FORMAL_HOME ?= /data1/oss_formal
-SBY         = $(OSS_FORMAL_HOME)/bin/sby
+include ../../../scripts/questa_one.mk
 
-QUESTA_LICENSE := $(QUESTA_HOME)/LR-287689_License.dat
-ETH_LIC_SERVER := 8161@lic-mentor.ethz.ch
-
-export LM_LICENSE_FILE   := $(ETH_LIC_SERVER):$(QUESTA_LICENSE)
-export MGLS_LICENSE_FILE := $(LM_LICENSE_FILE)
+QVERIFY ?= $(firstword $(wildcard $(QUESTA_HOME)/bin/qverify $(QUESTA_HOME)/linux_x86_64/qverify))
 
 FORMAL_DIR := $(abspath .)
 TB_DIR     := $(abspath ..)
@@ -29,15 +19,23 @@ FORMAL_SRCS = \
 	$(FORMAL_DIR)/frcv_formal_pkt_assumptions.sv \
 	$(FORMAL_DIR)/frcv_formal_top.sv
 
-.PHONY: compile oss_crc_prove oss_dut_crc_counter_prove clean oss_clean
+.PHONY: compile znformal_ready oss_crc_prove oss_dut_crc_counter_prove clean oss_clean
+
+znformal_ready:
+	@if [ -z "$(QVERIFY)" ]; then \
+	  echo "ERROR: qverify/ZnFormal is required now but was not found under $(QUESTA_HOME)."; \
+	  echo "Set QVERIFY_BIN or install the Questa ZnFormal executable into the active QuestaOne tree."; \
+	  exit 2; \
+	fi
 
 compile: $(WORK_DIR)/.compiled
 
 $(WORK_DIR)/.compiled: $(RTL_DIR)/crc16_calc.vhd $(RTL_DIR)/frame_rcv_ip.vhd $(FORMAL_SRCS)
 	@rm -rf $(WORK_DIR)
 	@mkdir -p $(WORK_DIR)
+	@cp $(QSIM_INI) $(WORK_DIR)/modelsim.ini
+	@chmod u+w $(WORK_DIR)/modelsim.ini
 	@cd $(WORK_DIR) && $(VLIB) work
-	@cd $(WORK_DIR) && $(VMAP) -c > /dev/null
 	@cd $(WORK_DIR) && $(VMAP) -modelsimini modelsim.ini work work > /dev/null
 	@cd $(WORK_DIR) && $(VCOM) -2008 -modelsimini modelsim.ini -work work $(RTL_DIR)/crc16_calc.vhd
 	@cd $(WORK_DIR) && $(VCOM) -2008 -modelsimini modelsim.ini -work work $(RTL_DIR)/frame_rcv_ip.vhd
@@ -51,14 +49,14 @@ $(WORK_DIR)/.compiled: $(RTL_DIR)/crc16_calc.vhd $(RTL_DIR)/frame_rcv_ip.vhd $(F
 	@touch $@
 
 oss_crc_prove:
-	@. $(OSS_FORMAL_HOME)/activate.sh && \
-	  cd $(OSS_DIR) && \
-	  $(SBY) -f crc16_calc_residue.sby
+	@echo "ERROR: OSS Yosys/SBY proofs are deprecated for this IP." >&2
+	@echo "Use Questa ZnFormal (`qverify`) with the active QuestaOne runtime instead." >&2
+	@exit 2
 
 oss_dut_crc_counter_prove:
-	@. $(OSS_FORMAL_HOME)/activate.sh && \
-	  cd $(OSS_DIR) && \
-	  $(SBY) -f frame_rcv_ip_crc_counter.sby
+	@echo "ERROR: OSS Yosys/SBY proofs are deprecated for this IP." >&2
+	@echo "Use Questa ZnFormal (`qverify`) with the active QuestaOne runtime instead." >&2
+	@exit 2
 
 clean:
 	rm -rf $(WORK_DIR) transcript vsim.wlf

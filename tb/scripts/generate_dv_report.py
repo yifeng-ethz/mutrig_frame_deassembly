@@ -12,6 +12,7 @@ from pathlib import Path
 
 TB = Path(__file__).resolve().parents[1]
 GEN = Path.home() / ".codex" / "skills" / "dv-workflow" / "scripts" / "dv_report_gen.py"
+LINTER = Path.home() / ".codex" / "skills" / "rtl-doc-style" / "scripts" / "rtl_doc_style_check.py"
 REPORT = TB / "REPORT"
 
 PASS_EMOJI = "✅"
@@ -219,6 +220,7 @@ def main() -> int:
     cmd = [sys.executable, str(GEN), "--tb", str(TB)]
     subprocess.run(cmd, check=True)
     annotate_reports(load_data())
+    subprocess.run([sys.executable, str(LINTER), "--strict", str(TB)], check=True)
     return 0
 
 

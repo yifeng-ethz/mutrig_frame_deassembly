@@ -1,6 +1,6 @@
 # P124_seed07_channel_mix_100k_cycles — transaction growth
 
-**Observed txns:** `0`
+**Observed txns:** `8`
 
 <!-- purpose: show how code coverage saturates with transaction count inside one random case. -->
 <!-- source: log-spaced checkpoint UCDBs saved by the test class at txn = 1, 2, 4, 8, ... N. -->

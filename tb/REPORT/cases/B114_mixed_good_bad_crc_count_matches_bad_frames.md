@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `0` |
+| ✅ | observed_txn | `4` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/B114_mixed_good_bad_crc_count_matches_bad_frames_after_s1.log`](../../uvm/logs/B114_mixed_good_bad_crc_count_matches_bad_frames_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/B114_mixed_good_bad_crc_count_matches_bad_frames_s1.ucdb`](../../uvm/cov_after/B114_mixed_good_bad_crc_count_matches_bad_frames_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `4` |
+| ℹ️ | log.hits | `4` |
+| ℹ️ | log.real_eops | `4` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 86.25 | n/a | 0.00 | 97.94 | n/a |
-| branch | 73.33 | n/a | 0.00 | 94.00 | n/a |
-| cond | 50.00 | n/a | 0.00 | 80.00 | n/a |
-| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| stmt | 86.25 | 21.56 | 0.00 | 97.94 | 0.00 |
+| branch | 73.33 | 18.33 | 0.00 | 94.00 | 0.00 |
+| cond | 50.00 | 12.50 | 0.00 | 80.00 | 0.00 |
+| expr | 98.77 | 24.69 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | 32.82 | n/a | 0.07 | 48.53 | n/a |
+| toggle | 32.82 | 8.20 | 0.07 | 48.53 | 0.02 |
 
 ---
 _Back to [bucket](../buckets/BASIC.md) &middot; [dashboard](../../DV_REPORT.md)_

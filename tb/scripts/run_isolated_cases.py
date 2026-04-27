@@ -13,6 +13,7 @@ from pathlib import Path
 
 TB = Path(__file__).resolve().parents[1]
 UVM_DIR = TB / "uvm"
+CASE_BUILD_RE = re.compile(r"_cfg([a-g])_", re.IGNORECASE)
 BUCKET_FILES = OrderedDict(
     [
         ("BASIC", TB / "DV_BASIC.md"),
@@ -27,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--rtl-variant", default="after")
-    parser.add_argument("--build-tag", default="CFG_A")
+    parser.add_argument("--build-tag")
     parser.add_argument("--verbosity", default="UVM_LOW")
     parser.add_argument("--case-list", default="")
     parser.add_argument("--case-regex", default="")
@@ -62,7 +63,17 @@ def filter_cases(all_cases: list[str], args: argparse.Namespace) -> list[str]:
     return selected
 
 
+def effective_build_tag(case_id: str, args: argparse.Namespace) -> str:
+    if args.build_tag:
+        return args.build_tag.upper()
+    match = CASE_BUILD_RE.search(case_id)
+    if match:
+        return f"CFG_{match.group(1).upper()}"
+    return "CFG_A"
+
+
 def run_case(case_id: str, args: argparse.Namespace) -> tuple[int, str]:
+    build_tag = effective_build_tag(case_id, args)
     cmd = [
         "make",
         "-C",
@@ -71,7 +82,7 @@ def run_case(case_id: str, args: argparse.Namespace) -> tuple[int, str]:
         f"CASE_ID={case_id}",
         f"SEED={args.seed}",
         f"RTL_VARIANT={args.rtl_variant}",
-        f"BUILD_TAG={args.build_tag}",
+        f"BUILD_TAG={build_tag}",
         f"VERBOSITY={args.verbosity}",
         "WORK_SUFFIX=isolated",
     ]
@@ -94,7 +105,7 @@ def main() -> int:
         return 2
 
     print(
-        f"[isolated] selected={len(cases)} seed={args.seed} rtl_variant={args.rtl_variant} build={args.build_tag}",
+        f"[isolated] selected={len(cases)} seed={args.seed} rtl_variant={args.rtl_variant} build={args.build_tag or 'auto'}",
         flush=True,
     )
 
@@ -109,7 +120,10 @@ def main() -> int:
             print(f"[isolated] skip {idx}/{total} {case_id}", flush=True)
             continue
 
-        print(f"[isolated] run  {idx}/{total} {case_id}", flush=True)
+        print(
+            f"[isolated] run  {idx}/{total} {case_id} build={effective_build_tag(case_id, args)}",
+            flush=True,
+        )
         rc, out = run_case(case_id, args)
         executed += 1
         if rc != 0:

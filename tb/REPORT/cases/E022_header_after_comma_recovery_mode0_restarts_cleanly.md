@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `0` |
+| ✅ | observed_txn | `1` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E022_header_after_comma_recovery_mode0_restarts_cleanly_after_s1.log`](../../uvm/logs/E022_header_after_comma_recovery_mode0_restarts_cleanly_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E022_header_after_comma_recovery_mode0_restarts_cleanly_s1.ucdb`](../../uvm/cov_after/E022_header_after_comma_recovery_mode0_restarts_cleanly_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
+| ℹ️ | log.headers | `1` |
 | ℹ️ | log.hits | `0` |
 | ℹ️ | log.real_eops | `0` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 73.88 | n/a | 0.00 | 85.22 | n/a |
-| branch | 54.00 | n/a | 0.00 | 71.33 | n/a |
-| cond | 47.50 | n/a | 0.00 | 55.00 | n/a |
-| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| stmt | 73.88 | 73.88 | 0.00 | 85.57 | 0.00 |
+| branch | 54.00 | 54.00 | 0.00 | 72.00 | 0.00 |
+| cond | 47.50 | 47.50 | 0.00 | 57.50 | 0.00 |
+| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | 12.15 | n/a | 0.20 | 17.43 | n/a |
+| toggle | 12.15 | 12.15 | 0.20 | 17.83 | 0.20 |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_

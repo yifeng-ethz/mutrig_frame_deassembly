@@ -1,6 +1,6 @@
-# ❌ DV Report — mutrig_frame_deassembly
+# ✅ DV Report — `mutrig_frame_deassembly`
 
-**DUT:** `frame_rcv_ip` &nbsp; **Date:** `2026-04-16` &nbsp;
+**DUT:** `frame_rcv_ip` &nbsp; **Date:** `2026-04-21` &nbsp;
 **RTL variant:** `after` &nbsp; **Seed:** `1`
 
 This page is the chief-architect dashboard. All per-case evidence lives under [`REPORT/`](REPORT/README.md).
@@ -13,7 +13,7 @@ This page is the chief-architect dashboard. All per-case evidence lives under [`
 
 | status | field | value |
 |:---:|---|---|
-| ❌ | failed_cases | `68` |
+| ✅ | failed_cases | `0` |
 | ✅ | signoff_runs_with_failures | `0` |
 | ✅ | unimplemented_cases | `0` |
 | ✅ | stale_artifacts | `0` |
@@ -24,22 +24,22 @@ This page is the chief-architect dashboard. All per-case evidence lives under [`
 
 | status | bucket | planned | evidenced | merged (stmt/branch/cond/expr/fsm_state/fsm_trans/toggle) | functional |
 |:---:|---|---:|---:|---|---|
-| ⚠️ | [`BASIC`](REPORT/buckets/BASIC.md) | 130 | 129 | stmt=97.94, branch=94.00, cond=80.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=48.60 | 99.23% (129/130) |
-| ⚠️ | [`EDGE`](REPORT/buckets/EDGE.md) | 130 | 125 | stmt=95.19, branch=89.33, cond=70.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=48.37 | 96.15% (125/130) |
-| ⚠️ | [`PROF`](REPORT/buckets/PROF.md) | 130 | 70 | stmt=92.78, branch=86.67, cond=65.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=52.29 | 53.85% (70/130) |
-| ⚠️ | [`ERROR`](REPORT/buckets/ERROR.md) | 130 | 128 | stmt=95.19, branch=89.33, cond=67.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=50.48 | 98.46% (128/130) |
+| ⚠️ | [`BASIC`](REPORT/buckets/BASIC.md) | 130 | 130 | stmt=97.94, branch=94.00, cond=80.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=48.60 | 100.0% (130/130) |
+| ⚠️ | [`EDGE`](REPORT/buckets/EDGE.md) | 130 | 130 | stmt=95.53, branch=90.00, cond=75.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=48.53 | 100.0% (130/130) |
+| ⚠️ | [`PROF`](REPORT/buckets/PROF.md) | 130 | 130 | stmt=94.50, branch=88.74, cond=72.50, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=53.75 | 100.0% (130/130) |
+| ⚠️ | [`ERROR`](REPORT/buckets/ERROR.md) | 130 | 130 | stmt=95.19, branch=89.33, cond=70.00, expr=98.77, fsm_state=n/a, fsm_trans=n/a, toggle=53.62 | 100.0% (130/130) |
 
 ## Totals
 
 | status | metric | pct | target |
 |:---:|---|---|---|
 | ✅ | stmt | 97.94 | 95.0 |
-| ✅ | branch | 94.00 | 90.0 |
+| ✅ | branch | 94.04 | 90.0 |
 | ℹ️ | cond | 85.00 | - |
 | ℹ️ | expr | 98.77 | - |
-| ⚠️ | toggle | 57.02 | 80.0 |
+| ⚠️ | toggle | 58.14 | 80.0 |
 
-- functional coverage: `86.92% (452/520)`
+- functional coverage: `100.0% (520/520)`
 
 ## Cross / continuous-frame signoff
 
@@ -47,7 +47,7 @@ This page is the chief-architect dashboard. All per-case evidence lives under [`
 
 | status | run_id | kind | build | seq | txns | cross_pct | ref |
 |:---:|---|---|---|---|---:|---:|---|
-| ✅ | [`all_buckets_frame_cfg_a_fix2`](REPORT/cross/all_buckets_frame_cfg_a_fix2.md) | all_buckets_frame | CFG_A | ALL_CFG_A | 775 | 68.75 | - |
+| ✅ | [`all_buckets_frame_cfg_a_fix2`](REPORT/cross/all_buckets_frame_cfg_a_fix2.md) | all_buckets_frame | CFG_A | ALL_CFG_A | 1462 | 96.88 | - |
 | ⚠️ | [`all_buckets_frame_cfg_b`](REPORT/cross/all_buckets_frame_cfg_b.md) | all_buckets_frame | CFG_B | ALL_CFG_B | 76 | 40.62 | - |
 | ⚠️ | [`all_buckets_frame_cfg_c`](REPORT/cross/all_buckets_frame_cfg_c.md) | all_buckets_frame | CFG_C | ALL_CFG_C | 36 | 40.62 | - |
 | ✅ | [`all_buckets_frame_cfg_d`](REPORT/cross/all_buckets_frame_cfg_d.md) | all_buckets_frame | CFG_D | ALL_CFG_D | 27 | 59.38 | - |
@@ -67,7 +67,7 @@ This page is the chief-architect dashboard. All per-case evidence lives under [`
 | ⚠️ | [`bucket_frame_error_cfg_e`](REPORT/cross/bucket_frame_error_cfg_e.md) | bucket_frame | CFG_E | ERROR_CFG_E | 1 | 34.38 | - |
 | ⚠️ | [`bucket_frame_error_cfg_f`](REPORT/cross/bucket_frame_error_cfg_f.md) | bucket_frame | CFG_F | ERROR_CFG_F | 1 | 34.38 | - |
 | ⚠️ | [`bucket_frame_error_cfg_g`](REPORT/cross/bucket_frame_error_cfg_g.md) | bucket_frame | CFG_G | ERROR_CFG_G | 1 | 34.38 | - |
-| ✅ | [`bucket_frame_prof_cfg_a`](REPORT/cross/bucket_frame_prof_cfg_a.md) | bucket_frame | CFG_A | PROF_CFG_A | 568 | 65.62 | - |
+| ✅ | [`bucket_frame_prof_cfg_a`](REPORT/cross/bucket_frame_prof_cfg_a.md) | bucket_frame | CFG_A | PROF_CFG_A | 1157 | 71.88 | - |
 | ⚠️ | [`bucket_frame_prof_cfg_b`](REPORT/cross/bucket_frame_prof_cfg_b.md) | bucket_frame | CFG_B | PROF_CFG_B | 61 | 40.62 | - |
 | ⚠️ | [`bucket_frame_prof_cfg_c`](REPORT/cross/bucket_frame_prof_cfg_c.md) | bucket_frame | CFG_C | PROF_CFG_C | 32 | 37.5 | - |
 | ✅ | [`bucket_frame_prof_cfg_d`](REPORT/cross/bucket_frame_prof_cfg_d.md) | bucket_frame | CFG_D | PROF_CFG_D | 18 | 59.38 | - |

@@ -23,14 +23,15 @@
 
 | status | field | value |
 |:---:|---|---|
-| ✅ | observed_txn | `0` |
+| ✅ | observed_txn | `1` |
 | ℹ️ | implementation_mode | `doc_case_engine_v2` |
 | ℹ️ | log | [`uvm/logs/E079_parity_error_on_nonhit_state_does_not_set_error0_after_s1.log`](../../uvm/logs/E079_parity_error_on_nonhit_state_does_not_set_error0_after_s1.log) |
 | ℹ️ | ucdb | [`uvm/cov_after/E079_parity_error_on_nonhit_state_does_not_set_error0_s1.ucdb`](../../uvm/cov_after/E079_parity_error_on_nonhit_state_does_not_set_error0_s1.ucdb) |
-| ℹ️ | log.headers | `0` |
-| ℹ️ | log.hits | `0` |
-| ℹ️ | log.real_eops | `0` |
+| ℹ️ | log.headers | `1` |
+| ℹ️ | log.hits | `1` |
+| ℹ️ | log.real_eops | `1` |
 | ℹ️ | log.synth_eops | `0` |
+| ℹ️ | log.endofruns | `0` |
 
 ## Coverage
 
@@ -38,13 +39,13 @@
 
 | metric | standalone | isolated_per_txn | bucket_gain | bucket_merged_after | bucket_gain_per_txn |
 |---|---|---|---|---|---|
-| stmt | 81.79 | n/a | 0.34 | 93.47 | n/a |
-| branch | 66.00 | n/a | 0.67 | 86.00 | n/a |
-| cond | 47.50 | n/a | 2.50 | 67.50 | n/a |
-| expr | 98.77 | n/a | 0.00 | 98.77 | n/a |
+| stmt | 81.79 | 81.79 | 0.34 | 93.81 | 0.34 |
+| branch | 66.00 | 66.00 | 0.67 | 86.67 | 0.67 |
+| cond | 47.50 | 47.50 | 2.50 | 72.50 | 2.50 |
+| expr | 98.77 | 98.77 | 0.00 | 98.77 | 0.00 |
 | fsm_state | n/a | n/a | n/a | n/a | n/a |
 | fsm_trans | n/a | n/a | n/a | n/a | n/a |
-| toggle | 14.10 | n/a | 0.20 | 46.98 | n/a |
+| toggle | 14.10 | 14.10 | 0.20 | 47.64 | 0.20 |
 
 ---
 _Back to [bucket](../buckets/EDGE.md) &middot; [dashboard](../../DV_REPORT.md)_
