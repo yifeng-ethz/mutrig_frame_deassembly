@@ -10,9 +10,16 @@ set SCRIPT_DIR [file dirname [info script]]
 if {[string length $SCRIPT_DIR] == 0} {
     set SCRIPT_DIR [pwd]
 }
+if {![string equal [file pathtype $SCRIPT_DIR] "absolute"]} {
+    set SCRIPT_DIR [file join [pwd] $SCRIPT_DIR]
+}
 set IP_DIR $SCRIPT_DIR
 if {[file tail $IP_DIR] eq "script"} {
     set IP_DIR [file dirname $IP_DIR]
+}
+if {![file exists [file join $IP_DIR rtl frame_rcv_ip.vhd]] &&
+    [file exists [file join $IP_DIR mutrig_frame_deassembly rtl frame_rcv_ip.vhd]]} {
+    set IP_DIR [file join $IP_DIR mutrig_frame_deassembly]
 }
 set DEFAULT_CHANNEL_WIDTH_CONST    4
 set DEFAULT_CSR_ADDR_WIDTH_CONST   2
@@ -20,9 +27,9 @@ set DEFAULT_CSR_ADDR_WIDTH_CONST   2
 set IP_UID_DEFAULT_CONST           1179804502 ;# ASCII "FRCV" = 0x46524356
 set VERSION_MAJOR_DEFAULT_CONST    26
 set VERSION_MINOR_DEFAULT_CONST    0
-set VERSION_PATCH_DEFAULT_CONST    6
-set BUILD_DEFAULT_CONST            418
-set VERSION_DATE_DEFAULT_CONST     20260418
+set VERSION_PATCH_DEFAULT_CONST    7
+set BUILD_DEFAULT_CONST            501
+set VERSION_DATE_DEFAULT_CONST     20260501
 set VERSION_GIT_DEFAULT_CONST      0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -135,9 +142,8 @@ VERSION[31:24] = MAJOR, VERSION[23:16] = MINOR, VERSION[15:12] = PATCH, VERSION[
 <b>Catalog identity</b><br/>\
 UID default is <b>FRCV</b> (0x46524356).<br/>\
 Default <b>VERSION_GIT</b> = <b>%s</b> (%s). Git describe = <b>%s</b>.<br/>\
-Enable <b>Override Git Stamp</b> to enter a custom value.<br/><br/>\
 <b>Editability</b><br/>\
-<b>IP_UID</b> and <b>INSTANCE_ID</b> remain integration-editable; version/build/date fields are locked to the packaged image.</html>} \
+<b>IP_UID</b> and <b>INSTANCE_ID</b> remain integration-editable; version/build/date/git fields are locked to the packaged image.</html>} \
             $version_git_hex \
             $::VERSION_GIT_SHORT_DEFAULT_CONST \
             $::VERSION_GIT_DESCRIBE_DEFAULT_CONST]
@@ -173,7 +179,9 @@ a dedicated <b>endofrun</b> pulse is emitted once per run after the final local 
 <tr><td>0x00</td><td>[7:1]</td><td>reserved_control</td><td>RW</td><td>Legacy software-visible control bits; current RTL consumes only bit 0.</td></tr>\
 <tr><td>0x00</td><td>[29:24]</td><td>frame_flags</td><td>RO</td><td>Mirror of the latest parsed frame flags when <b>headerinfo</b> is updated.</td></tr>\
 <tr><td>0x00</td><td>[31:30]</td><td>reserved_status</td><td>RO</td><td>Reserved.</td></tr>\
-</table></html>}
+</table><br/>\
+<b>Legacy direct-header waiver</b><br/>\
+This packaged legacy IP does not implement a writable <b>SCRATCHPAD</b> register; software-visible state is limited to CONTROL_STATUS, CRC_ERR_COUNT, and FRAME_COUNT_DELTA.</html>}
     }
 }
 
@@ -239,7 +247,7 @@ proc elaborate {} {
     set_parameter_property VERSION_PATCH ENABLED false
     set_parameter_property BUILD ENABLED false
     set_parameter_property VERSION_DATE ENABLED false
-    catch {set_parameter_property VERSION_GIT ENABLED [get_parameter_value GIT_STAMP_OVERRIDE]}
+    set_parameter_property VERSION_GIT ENABLED false
 
     add_interface_port csr avs_csr_address address Input [get_parameter_value CSR_ADDR_WIDTH]
     add_interface_port rx8b1k asi_rx8b1k_channel channel Input [get_parameter_value CHANNEL_WIDTH]
@@ -258,15 +266,15 @@ add_fileset QUARTUS_SYNTH QUARTUS_SYNTH "" ""
 set_fileset_property QUARTUS_SYNTH TOP_LEVEL frame_rcv_ip
 set_fileset_property QUARTUS_SYNTH ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property QUARTUS_SYNTH ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file frame_rcv_ip.vhd VHDL PATH rtl/frame_rcv_ip.vhd TOP_LEVEL_FILE
-add_fileset_file crc16_calc.vhd  VHDL PATH rtl/crc16_calc.vhd
+add_fileset_file frame_rcv_ip.vhd VHDL PATH [file join $IP_DIR rtl frame_rcv_ip.vhd] TOP_LEVEL_FILE
+add_fileset_file crc16_calc.vhd  VHDL PATH [file join $IP_DIR rtl crc16_calc.vhd]
 
 add_fileset SIM_VHDL SIM_VHDL "" ""
 set_fileset_property SIM_VHDL TOP_LEVEL frame_rcv_ip
 set_fileset_property SIM_VHDL ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property SIM_VHDL ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file frame_rcv_ip.vhd VHDL PATH rtl/frame_rcv_ip.vhd TOP_LEVEL_FILE
-add_fileset_file crc16_calc.vhd  VHDL PATH rtl/crc16_calc.vhd
+add_fileset_file frame_rcv_ip.vhd VHDL PATH [file join $IP_DIR rtl frame_rcv_ip.vhd] TOP_LEVEL_FILE
+add_fileset_file crc16_calc.vhd  VHDL PATH [file join $IP_DIR rtl crc16_calc.vhd]
 
 # ========================================================================
 # Parameters
@@ -299,32 +307,49 @@ set_parameter_property DEBUG_LV HDL_PARAMETER true
 
 add_parameter IP_UID INTEGER $IP_UID_DEFAULT_CONST
 set_parameter_property IP_UID DISPLAY_NAME "IP UID"
+set_parameter_property IP_UID DISPLAY_HINT hexadecimal
+set_parameter_property IP_UID HDL_PARAMETER true
 set_parameter_property IP_UID DESCRIPTION "Catalog identity tag for software-visible provenance."
 
 add_parameter VERSION_MAJOR INTEGER $VERSION_MAJOR_DEFAULT_CONST
 set_parameter_property VERSION_MAJOR DISPLAY_NAME "Version Major"
+set_parameter_property VERSION_MAJOR ENABLED false
+set_parameter_property VERSION_MAJOR HDL_PARAMETER true
 
 add_parameter VERSION_MINOR INTEGER $VERSION_MINOR_DEFAULT_CONST
 set_parameter_property VERSION_MINOR DISPLAY_NAME "Version Minor"
+set_parameter_property VERSION_MINOR ENABLED false
+set_parameter_property VERSION_MINOR HDL_PARAMETER true
 
 add_parameter VERSION_PATCH INTEGER $VERSION_PATCH_DEFAULT_CONST
 set_parameter_property VERSION_PATCH DISPLAY_NAME "Version Patch"
+set_parameter_property VERSION_PATCH ENABLED false
+set_parameter_property VERSION_PATCH HDL_PARAMETER true
 
 add_parameter BUILD INTEGER $BUILD_DEFAULT_CONST
 set_parameter_property BUILD DISPLAY_NAME "Build"
+set_parameter_property BUILD ENABLED false
+set_parameter_property BUILD HDL_PARAMETER true
 
 add_parameter VERSION_DATE INTEGER $VERSION_DATE_DEFAULT_CONST
 set_parameter_property VERSION_DATE DISPLAY_NAME "Version Date"
+set_parameter_property VERSION_DATE ENABLED false
+set_parameter_property VERSION_DATE HDL_PARAMETER true
 
 add_parameter GIT_STAMP_OVERRIDE BOOLEAN false
 set_parameter_property GIT_STAMP_OVERRIDE DISPLAY_NAME "Override Git Stamp"
 set_parameter_property GIT_STAMP_OVERRIDE DESCRIPTION "Allow manual editing of VERSION_GIT for non-default packaged images."
+set_parameter_property GIT_STAMP_OVERRIDE VISIBLE false
 
 add_parameter VERSION_GIT INTEGER $VERSION_GIT_DEFAULT_CONST
 set_parameter_property VERSION_GIT DISPLAY_NAME "Version Git"
+set_parameter_property VERSION_GIT DISPLAY_HINT hexadecimal
+set_parameter_property VERSION_GIT ENABLED false
+set_parameter_property VERSION_GIT HDL_PARAMETER true
 
 add_parameter INSTANCE_ID INTEGER $INSTANCE_ID_DEFAULT_CONST
 set_parameter_property INSTANCE_ID DISPLAY_NAME "Instance ID"
+set_parameter_property INSTANCE_ID HDL_PARAMETER true
 set_parameter_property INSTANCE_ID DESCRIPTION "Integrator-selected instance tag."
 
 # ========================================================================
@@ -351,7 +376,6 @@ add_display_item "version_group" VERSION_MINOR PARAMETER
 add_display_item "version_group" VERSION_PATCH PARAMETER
 add_display_item "version_group" BUILD PARAMETER
 add_display_item "version_group" VERSION_DATE PARAMETER
-add_display_item "version_group" GIT_STAMP_OVERRIDE PARAMETER
 add_display_item "version_group" VERSION_GIT PARAMETER
 add_html_text "Identity" versioning_html ""
 
