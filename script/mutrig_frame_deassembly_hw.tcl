@@ -29,6 +29,12 @@ set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
 if {![catch {set VERSION_GIT_SHORT_DEFAULT_CONST [string trim [exec git -C $IP_DIR rev-parse --short HEAD]]}]} {
     if {[regexp {^[0-9a-fA-F]+$} $VERSION_GIT_SHORT_DEFAULT_CONST]} {
         scan $VERSION_GIT_SHORT_DEFAULT_CONST %x VERSION_GIT_DEFAULT_CONST
+        # Clamp into the IP validator's signed-31-bit range. The git short
+        # rev's high nibble can have bit 31 set, which produces a
+        # negative-when-signed value that the IP's own validate proc
+        # rejects. Mask off the sign bit to keep the default in
+        # [0..0x7FFFFFFF]. See mu3e-ip-cores BUG_HISTORY.md B009.
+        set VERSION_GIT_DEFAULT_CONST [expr {$VERSION_GIT_DEFAULT_CONST & 0x7FFFFFFF}]
     }
 }
 catch {
