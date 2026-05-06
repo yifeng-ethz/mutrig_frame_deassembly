@@ -65,6 +65,10 @@ module frame_rcv_ip_dut_sv #(
   output logic [31:0]                    dbg_p_crc_err_count
 );
 
+  logic [31:0] unused_debug_fifo_fill_levels;
+  logic [63:0] unused_debug_hit_metadata;
+  logic        unused_debug_hit_metadata_valid;
+
   frame_rcv_ip #(
     .CHANNEL_WIDTH (CHANNEL_WIDTH),
     .CSR_ADDR_WIDTH(CSR_ADDR_WIDTH),
@@ -94,6 +98,9 @@ module frame_rcv_ip_dut_sv #(
     .asi_ctrl_data               (asi_ctrl_data),
     .asi_ctrl_valid              (asi_ctrl_valid),
     .asi_ctrl_ready              (asi_ctrl_ready),
+    .coe_debug_fifo_fill_levels  (unused_debug_fifo_fill_levels),
+    .coe_debug_hit_metadata      (unused_debug_hit_metadata),
+    .coe_debug_hit_metadata_valid(unused_debug_hit_metadata_valid),
     .i_rst                       (i_rst),
     .i_clk                       (i_clk)
   );

@@ -3,7 +3,7 @@
 MuTRiG frame receiver / deassembly IP that converts the `rx8b1k` byte stream into
 `hit_type0` packets, `headerinfo` metadata pulses, and CSR-visible frame / CRC counters.
 
-**Version:** `26.0.6.0418`
+**Version:** `26.1.0.0506`
 **Module name:** `mutrig_frame_deassembly`
 **Platform Designer group:** `Mu3e Data Plane / Modules`
 

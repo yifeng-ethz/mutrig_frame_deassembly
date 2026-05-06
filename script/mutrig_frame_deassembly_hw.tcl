@@ -19,10 +19,10 @@ set DEFAULT_CSR_ADDR_WIDTH_CONST   2
 
 set IP_UID_DEFAULT_CONST           1179804502 ;# ASCII "FRCV" = 0x46524356
 set VERSION_MAJOR_DEFAULT_CONST    26
-set VERSION_MINOR_DEFAULT_CONST    0
-set VERSION_PATCH_DEFAULT_CONST    6
-set BUILD_DEFAULT_CONST            418
-set VERSION_DATE_DEFAULT_CONST     20260418
+set VERSION_MINOR_DEFAULT_CONST    1
+set VERSION_PATCH_DEFAULT_CONST    0
+set BUILD_DEFAULT_CONST            506
+set VERSION_DATE_DEFAULT_CONST     20260506
 set VERSION_GIT_DEFAULT_CONST      0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -117,7 +117,9 @@ Parity and decode errors are still translated into hit / CRC sideband error repo
     catch {
         set_display_item_property debug_html TEXT {<html>\
 <b>DEBUG_LV</b><br/>\
-<b>0</b> off, <b>1</b> synthesizable debug visibility, <b>2</b> simulation-only instrumentation.</html>}
+<b>0</b>: debug conduits disabled and driven to zero in RTL.<br/>\
+<b>1</b>: enable the <b>debug_fifo_fill</b> conduit. Its 32-bit word exposes current hit count, declared frame length, remaining hit count, the decoded MuTRiG source FIFO-full flag, and parser busy.<br/>\
+<b>2</b>: additionally enable the <b>debug_hit_metadata</b> conduit. One 64-bit metadata word is emitted with each <b>hit_type0_valid</b> beat.</html>}
     }
     catch {
         set_display_item_property profile_html TEXT [format {<html>\
@@ -163,7 +165,10 @@ a dedicated <b>endofrun</b> pulse is emitted once per run after the final local 
 <b>Egress stream: headerinfo</b><br/>\
 42-bit payload = frame_flags[5:0], frame_len[15:6], word_count[25:16], frame_number[41:26]. Channel mirrors the ingress lane selector.<br/><br/>\
 <b>Control stream: ctrl</b><br/>\
-9-bit one-hot run-state command. <b>asi_ctrl_ready</b> is low while RUN_PREPARE / SYNC / TERMINATING work is still outstanding, and rises only once the local parser obligations are complete.</html>} \
+9-bit one-hot run-state command. <b>asi_ctrl_ready</b> is low while RUN_PREPARE / SYNC / TERMINATING work is still outstanding, and rises only once the local parser obligations are complete.<br/><br/>\
+<b>Optional debug conduits</b><br/>\
+<b>debug_fifo_fill</b> is visible when <b>DEBUG_LV &gt;= 1</b>. Word map: [9:0] current hit count, [19:10] declared frame length, [29:20] remaining hit count, [30] source FIFO-full frame flag, [31] parser busy.<br/>\
+<b>debug_hit_metadata</b> is visible when <b>DEBUG_LV &gt;= 2</b>. Metadata map: [15:0] frame number, [25:16] hit index, [35:26] frame length, [41:36] frame flags, [45:42] ASIC/channel low bits, [48:46] type0 error, [49] SOP, [50] EOP, [51] short-mode, [52] T_BadHit, [53] E_BadHit, [58:54] E_fine.</html>} \
             $channel_width]
     }
     catch {
@@ -239,6 +244,7 @@ proc validate {} {
 
 proc elaborate {} {
     compute_derived_values
+    set debug_level [get_parameter_value DEBUG_LV]
 
     set_parameter_property VERSION_MAJOR ENABLED false
     set_parameter_property VERSION_MINOR ENABLED false
@@ -255,6 +261,8 @@ proc elaborate {} {
     set_interface_property rx8b1k maxChannel [expr {2**[get_parameter_value CHANNEL_WIDTH] - 1}]
     set_interface_property hit_type0 maxChannel [expr {2**[get_parameter_value CHANNEL_WIDTH] - 1}]
     set_interface_property headerinfo maxChannel [expr {2**[get_parameter_value CHANNEL_WIDTH] - 1}]
+    set_interface_property debug_fifo_fill ENABLED [expr {$debug_level >= 1 ? "true" : "false"}]
+    set_interface_property debug_hit_metadata ENABLED [expr {$debug_level >= 2 ? "true" : "false"}]
 }
 
 # ========================================================================
@@ -302,6 +310,8 @@ set_parameter_property DEBUG_LV DISPLAY_NAME "Debug Level"
 set_parameter_property DEBUG_LV ALLOWED_RANGES {0 1 2}
 set_parameter_property DEBUG_LV UNITS None
 set_parameter_property DEBUG_LV HDL_PARAMETER true
+set_parameter_property DEBUG_LV AFFECTS_ELABORATION true
+set_parameter_property DEBUG_LV DESCRIPTION "0 disables optional debug conduits; 1 enables parser/source FIFO fill observability; 2 also emits per-hit metadata aligned to hit_type0_valid."
 
 add_parameter IP_UID INTEGER $IP_UID_DEFAULT_CONST
 set_parameter_property IP_UID DISPLAY_NAME "IP UID"
@@ -448,6 +458,19 @@ set_interface_property ctrl ENABLED true
 add_interface_port ctrl asi_ctrl_data  data  Input 9
 add_interface_port ctrl asi_ctrl_valid valid Input 1
 add_interface_port ctrl asi_ctrl_ready ready Output 1
+
+add_interface debug_fifo_fill conduit start
+set_interface_property debug_fifo_fill associatedClock clock_sink
+set_interface_property debug_fifo_fill associatedReset reset_sink
+set_interface_property debug_fifo_fill ENABLED false
+add_interface_port debug_fifo_fill coe_debug_fifo_fill_levels fill_levels Output 32
+
+add_interface debug_hit_metadata conduit start
+set_interface_property debug_hit_metadata associatedClock clock_sink
+set_interface_property debug_hit_metadata associatedReset reset_sink
+set_interface_property debug_hit_metadata ENABLED false
+add_interface_port debug_hit_metadata coe_debug_hit_metadata metadata Output 64
+add_interface_port debug_hit_metadata coe_debug_hit_metadata_valid valid Output 1
 
 add_interface clock_sink clock end
 set_interface_property clock_sink clockRate 0

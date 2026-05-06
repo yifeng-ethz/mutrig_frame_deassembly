@@ -287,6 +287,9 @@ begin
             asi_ctrl_data               => asi_ctrl_data,
             asi_ctrl_valid              => asi_ctrl_valid,
             asi_ctrl_ready              => asi_ctrl_ready,
+            coe_debug_fifo_fill_levels  => open,
+            coe_debug_hit_metadata      => open,
+            coe_debug_hit_metadata_valid => open,
             i_rst                       => rst,
             i_clk                       => clk125
         );
