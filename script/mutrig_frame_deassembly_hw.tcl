@@ -272,15 +272,15 @@ add_fileset QUARTUS_SYNTH QUARTUS_SYNTH "" ""
 set_fileset_property QUARTUS_SYNTH TOP_LEVEL frame_rcv_ip
 set_fileset_property QUARTUS_SYNTH ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property QUARTUS_SYNTH ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file frame_rcv_ip.vhd VHDL PATH rtl/frame_rcv_ip.vhd TOP_LEVEL_FILE
-add_fileset_file crc16_calc.vhd  VHDL PATH rtl/crc16_calc.vhd
+add_fileset_file frame_rcv_ip.vhd VHDL PATH [file join $IP_DIR rtl frame_rcv_ip.vhd] TOP_LEVEL_FILE
+add_fileset_file crc16_calc.vhd  VHDL PATH [file join $IP_DIR rtl crc16_calc.vhd]
 
 add_fileset SIM_VHDL SIM_VHDL "" ""
 set_fileset_property SIM_VHDL TOP_LEVEL frame_rcv_ip
 set_fileset_property SIM_VHDL ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property SIM_VHDL ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file frame_rcv_ip.vhd VHDL PATH rtl/frame_rcv_ip.vhd TOP_LEVEL_FILE
-add_fileset_file crc16_calc.vhd  VHDL PATH rtl/crc16_calc.vhd
+add_fileset_file frame_rcv_ip.vhd VHDL PATH [file join $IP_DIR rtl frame_rcv_ip.vhd] TOP_LEVEL_FILE
+add_fileset_file crc16_calc.vhd  VHDL PATH [file join $IP_DIR rtl crc16_calc.vhd]
 
 # ========================================================================
 # Parameters

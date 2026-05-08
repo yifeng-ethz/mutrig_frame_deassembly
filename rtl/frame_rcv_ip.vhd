@@ -217,6 +217,7 @@ architecture rtl of frame_rcv_ip is
 	-- data from lvds receiver
 	signal i_data                  		: std_logic_vector(7 downto 0);
 	signal i_byteisk               		: std_logic;
+	signal i_symbol_valid          		: std_logic;
 	
 	-- header information
 	signal o_hits						: t_hit_presort;
@@ -406,9 +407,15 @@ begin
 		if (asi_rx8b1k_error(2) = '0' and asi_rx8b1k_valid = '1') then
 			i_data				<= asi_rx8b1k_data(7 downto 0);
 			i_byteisk			<= asi_rx8b1k_data(8);
-		else -- halt on invalid input or mask if "loss_sync_pattern" error is present
+			i_symbol_valid		<= '1';
+		elsif (asi_rx8b1k_error(2) = '1') then
 			i_data				<= x"BC";
 			i_byteisk			<= '1';
+			i_symbol_valid		<= '1';
+		else -- Avalon-ST valid gaps are stalls, not MuTRiG idle symbols.
+			i_data				<= x"BC";
+			i_byteisk			<= '1';
+			i_symbol_valid		<= '0';
 		end if;
 	end process proc_input_wrapper_comb;
 	
@@ -823,7 +830,9 @@ begin
 		sop_comb			<= '0';
 		eop_comb			<= '0';
 
-        if ( i_byteisk = '1' and i_data = x"BC" and p_state /= FS_CRC_CHECK ) then
+        if ( i_symbol_valid = '0' ) then
+            n_crc_din_valid <= '0';
+        elsif ( i_byteisk = '1' and i_data = x"BC" and p_state /= FS_CRC_CHECK ) then
             -- ---------------------------------------
             -- YW: restore to idle in the next cycle
             -- ---------------------------------------
