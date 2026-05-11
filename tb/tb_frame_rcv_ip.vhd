@@ -42,7 +42,9 @@ architecture sim of tb_frame_rcv_ip is
     signal avs_csr_writedata       : std_logic_vector(31 downto 0) := (others => '0');
     signal asi_ctrl_data           : std_logic_vector(8 downto 0) := (others => '0');
     signal asi_ctrl_valid          : std_logic := '0';
-    signal asi_ctrl_ready          : std_logic;
+    -- asi_ctrl_ready port removed: rc-readyless contract (26.2.0). The ctrl
+    -- sink no longer exports a ready output; the host broadcasts without
+    -- backpressure. send_ctrl_cmd replaces send_ctrl_until_ready below.
     signal i_rst                   : std_logic := '1';
     signal i_clk                   : std_logic := '0';
 
@@ -79,23 +81,23 @@ architecture sim of tb_frame_rcv_ip is
         rx_error                   <= (others => '0');
     end procedure drive_symbol;
 
-    procedure send_ctrl_until_ready(
+    -- rc-readyless: the ctrl sink no longer exports ready; host broadcasts for
+    -- one cycle and the DUT must capture unconditionally. The old
+    -- send_ctrl_until_ready is replaced by send_ctrl_cmd which pulses valid
+    -- for exactly one clock.
+    procedure send_ctrl_cmd(
         signal clk                 : in  std_logic;
         signal ctrl_data           : out std_logic_vector(8 downto 0);
         signal ctrl_valid          : out std_logic;
-        signal ctrl_ready          : in  std_logic;
         constant ctrl_word         : in  std_logic_vector(8 downto 0)
     ) is
     begin
         ctrl_data                  <= ctrl_word;
         ctrl_valid                 <= '1';
-        loop
-            wait until rising_edge(clk);
-            exit when ctrl_ready = '1';
-        end loop;
+        wait until rising_edge(clk);
         ctrl_valid                 <= '0';
         ctrl_data                  <= (others => '0');
-    end procedure send_ctrl_until_ready;
+    end procedure send_ctrl_cmd;
 
     procedure send_long_frame(
         signal clk                 : in  std_logic;
@@ -176,7 +178,6 @@ begin
             avs_csr_writedata       => avs_csr_writedata,
             asi_ctrl_data           => asi_ctrl_data,
             asi_ctrl_valid          => asi_ctrl_valid,
-            asi_ctrl_ready          => asi_ctrl_ready,
             coe_debug_fifo_fill_levels => open,
             coe_debug_hit_metadata  => open,
             coe_debug_hit_metadata_valid => open,
@@ -214,7 +215,7 @@ begin
         variable base_hit_eops      : integer;
         variable base_endofruns     : integer;
         variable base_headerinfo    : integer;
-        variable ready_seen         : boolean;
+        -- ready_seen removed: asi_ctrl_ready port removed in 26.2.0 (rc-readyless)
         variable endofrun_seen      : boolean;
         variable active_eop_seen    : boolean;
     begin
@@ -222,9 +223,11 @@ begin
         i_rst <= '0';
         wait_cycles(i_clk, 2);
 
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_RUN_PREP_CONST);
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_SYNC_CONST);
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_RUNNING_CONST);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_RUN_PREP_CONST);
+        wait_cycles(i_clk, 2);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_SYNC_CONST);
+        wait_cycles(i_clk, 2);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_RUNNING_CONST);
         wait_cycles(i_clk, 2);
 
         base_hits       := hit_count;
@@ -243,27 +246,18 @@ begin
             severity failure;
 
         base_endofruns := endofrun_count;
-        asi_ctrl_data  <= CTRL_TERMINATE_CONST;
-        asi_ctrl_valid <= '1';
-        wait_cycles(i_clk, 2);
-        asi_ctrl_valid <= '0';
-        asi_ctrl_data  <= (others => '0');
-        ready_seen     := false;
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_TERMINATE_CONST);
+        -- rc-readyless: no ready port; wait for the endofrun pulse instead
         for wait_idx in 0 to TERMINATE_WAIT_MAX_CYCLES loop
             wait until rising_edge(i_clk);
-            if asi_ctrl_ready = '1' then
-                ready_seen := true;
-            end if;
-            exit when ready_seen and endofrun_count = base_endofruns + 1;
+            exit when endofrun_count = base_endofruns + 1;
         end loop;
-        assert ready_seen
-            report "Idle TERMINATING should restore ctrl_ready after the guarded close"
-            severity failure;
         assert endofrun_count = base_endofruns + 1
             report "Idle TERMINATING should emit exactly one hit_type0_endofrun pulse"
             severity failure;
 
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_IDLE_CONST);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_IDLE_CONST);
+        wait_cycles(i_clk, 2);
         base_hits       := hit_count;
         base_headerinfo := headerinfo_count;
         base_endofruns  := endofrun_count;
@@ -279,29 +273,27 @@ begin
             report "IDLE must not emit extra hit_type0_endofrun pulses"
             severity failure;
 
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_RUN_PREP_CONST);
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_SYNC_CONST);
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_RUNNING_CONST);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_RUN_PREP_CONST);
+        wait_cycles(i_clk, 2);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_SYNC_CONST);
+        wait_cycles(i_clk, 2);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_RUNNING_CONST);
         wait_cycles(i_clk, 2);
 
         base_hits        := hit_count;
         base_hit_eops    := hit_eop_count;
         base_headerinfo  := headerinfo_count;
         base_endofruns   := endofrun_count;
-        asi_ctrl_data    <= CTRL_TERMINATE_CONST;
-        asi_ctrl_valid   <= '1';
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_TERMINATE_CONST);
         wait_cycles(i_clk, DELAYED_TAIL_GAP_CYCLES_CONST);
         assert endofrun_count = base_endofruns
             report "Delayed terminating tail must not emit hit_type0_endofrun before the final frame arrives"
             severity failure;
-        assert asi_ctrl_ready = '0'
-            report "Delayed terminating tail must hold ctrl_ready low while waiting for the late final frame"
-            severity failure;
+        -- rc-readyless: ready port removed; internal gate not externally observable
         send_long_frame(i_clk, asi_rx8b1k_data, asi_rx8b1k_valid, asi_rx8b1k_error, 3, DELAYED_TAIL_HIT_WORD_CONST);
         wait_cycles(i_clk, 16);
         send_empty_frame(i_clk, asi_rx8b1k_data, asi_rx8b1k_valid, asi_rx8b1k_error, 4);
 
-        ready_seen      := false;
         active_eop_seen := false;
         endofrun_seen   := false;
         for wait_idx in 0 to TERMINATE_WAIT_MAX_CYCLES loop
@@ -312,17 +304,9 @@ begin
             if aso_hit_type0_endofrun = '1' then
                 endofrun_seen := true;
             end if;
-            if asi_ctrl_ready = '1' then
-                ready_seen := true;
-                exit when active_eop_seen and endofrun_seen;
-            end if;
+            exit when active_eop_seen and endofrun_seen;
         end loop;
-        asi_ctrl_valid <= '0';
-        asi_ctrl_data  <= (others => '0');
 
-        assert ready_seen
-            report "Delayed terminating tail should acknowledge only after the late final frame is drained"
-            severity failure;
         assert hit_count = base_hits + 1
             report "Delayed terminating tail should still deliver the late final frame hit"
             severity failure;
@@ -339,9 +323,11 @@ begin
             report "Delayed terminating tail should create exactly one hit_type0_endofrun pulse"
             severity failure;
 
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_RUN_PREP_CONST);
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_SYNC_CONST);
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_RUNNING_CONST);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_RUN_PREP_CONST);
+        wait_cycles(i_clk, 2);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_SYNC_CONST);
+        wait_cycles(i_clk, 2);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_RUNNING_CONST);
         wait_cycles(i_clk, 2);
 
         base_hits        := hit_count;
@@ -371,7 +357,6 @@ begin
         wait_cycles(i_clk, 16);
         send_empty_frame(i_clk, asi_rx8b1k_data, asi_rx8b1k_valid, asi_rx8b1k_error, 4);
 
-        ready_seen      := false;
         active_eop_seen := false;
         endofrun_seen   := false;
         for wait_idx in 0 to TERMINATE_WAIT_MAX_CYCLES loop
@@ -382,14 +367,9 @@ begin
             if aso_hit_type0_endofrun = '1' then
                 endofrun_seen := true;
             end if;
-            if asi_ctrl_ready = '1' then
-                ready_seen := true;
-                exit when active_eop_seen and endofrun_seen;
-            end if;
+            exit when active_eop_seen and endofrun_seen;
         end loop;
-        assert ready_seen
-            report "TERMINATING should acknowledge once the active frame is fully drained"
-            severity failure;
+        -- rc-readyless: ready port removed; drain completion signalled by endofrun pulse
         asi_ctrl_valid <= '0';
         asi_ctrl_data  <= (others => '0');
 
@@ -406,7 +386,8 @@ begin
             report "Active frame drain should create exactly one hit_type0_endofrun pulse"
             severity failure;
 
-        send_ctrl_until_ready(i_clk, asi_ctrl_data, asi_ctrl_valid, asi_ctrl_ready, CTRL_IDLE_CONST);
+        send_ctrl_cmd(i_clk, asi_ctrl_data, asi_ctrl_valid, CTRL_IDLE_CONST);
+        wait_cycles(i_clk, 2);
         report "tb_frame_rcv_ip PASSED" severity note;
         finish;
     end process stim;

@@ -29,9 +29,10 @@
 -- Revision 1.36 - YW: Close TERMINATING on the first empty frame and keep the idle guard only as a fallback.
 -- Revision 1.37 - YW: Keep the dedicated CRC_CHECK cycle alive on idle-BC return so bad-CRC frames retire the sideband pulse and counter coherently.
 -- Revision 1.38 - YW: Add DEBUG_LV-gated exported observability for parser fill levels and per-hit metadata.
--- Version : 26.1.0
--- Date    : 20260506
--- Change  : Add DEBUG_LV-gated debug conduits for parser/source FIFO observability and type0 hit metadata without changing DEBUG_LV=0 datapath behavior.
+-- Revision 1.39 - YW: Strip asi_ctrl_ready from entity port (rc-readyless contract); ctrl_ready_comb kept as local signal.
+-- Version : 26.2.0
+-- Date    : 20260511
+-- Change  : Remove asi_ctrl_ready output port; preserve internal ctrl_ready_comb signal. Qsys no longer auto-inserts timing_adapter on ctrl sink (B002 fix).
 
 -- Additional Comments:
 --      IP wrapper layer: 
@@ -117,9 +118,8 @@ port(
     -- AVST sink [ctrl]
 	-- (management interface of run control timing)
 	-- this signal is time critical and must be synchronzed for all datapath modules
-	asi_ctrl_data			: in  std_logic_vector(8 downto 0); 
+	asi_ctrl_data			: in  std_logic_vector(8 downto 0);
 	asi_ctrl_valid			: in  std_logic;
-	asi_ctrl_ready			: out std_logic;
 
     -- Debug conduit exports. The Qsys package disables these interfaces for
     -- DEBUG_LV=0, but the ports remain driven to deterministic zeroes.
@@ -277,7 +277,6 @@ architecture rtl of frame_rcv_ip is
 begin
 
 	aso_hit_type0_endofrun <= terminating_endofrun_pulse;
-	asi_ctrl_ready <= ctrl_ready_comb;
 	terminating_frame_start_seen <= '1' when (
 		p_state = FS_IDLE and enable = '1' and i_byteisk = '1' and i_data = c_header
 	) else '0';

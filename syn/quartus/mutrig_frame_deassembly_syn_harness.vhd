@@ -76,7 +76,7 @@ architecture rtl of mutrig_frame_deassembly_syn_harness is
 
     signal asi_ctrl_data           : std_logic_vector(8 downto 0);
     signal asi_ctrl_valid          : std_logic;
-    signal asi_ctrl_ready          : std_logic;
+    -- asi_ctrl_ready removed: rc-readyless 26.2.0
 
     function pack_symbol(is_k: std_logic; value: std_logic_vector(7 downto 0)) return std_logic_vector is
     begin
@@ -124,25 +124,20 @@ begin
                     end if;
 
                 when ST_SEND_PREP =>
+                    -- rc-readyless 26.2.0: no ready port; pulse valid for one cycle and advance
                     asi_ctrl_data  <= CTRL_RUN_PREP_CONST;
                     asi_ctrl_valid <= '1';
-                    if asi_ctrl_ready = '1' then
-                        stim_state <= ST_SEND_SYNC;
-                    end if;
+                    stim_state     <= ST_SEND_SYNC;
 
                 when ST_SEND_SYNC =>
                     asi_ctrl_data  <= CTRL_SYNC_CONST;
                     asi_ctrl_valid <= '1';
-                    if asi_ctrl_ready = '1' then
-                        stim_state <= ST_SEND_RUNNING;
-                    end if;
+                    stim_state     <= ST_SEND_RUNNING;
 
                 when ST_SEND_RUNNING =>
                     asi_ctrl_data  <= CTRL_RUNNING_CONST;
                     asi_ctrl_valid <= '1';
-                    if asi_ctrl_ready = '1' then
-                        stim_state <= ST_FRAME_HEADER;
-                    end if;
+                    stim_state     <= ST_FRAME_HEADER;
 
                 when ST_FRAME_HEADER =>
                     asi_rx8b1k_data  <= HEADER_BYTE_CONST;
@@ -286,7 +281,6 @@ begin
             avs_csr_writedata           => avs_csr_writedata,
             asi_ctrl_data               => asi_ctrl_data,
             asi_ctrl_valid              => asi_ctrl_valid,
-            asi_ctrl_ready              => asi_ctrl_ready,
             coe_debug_fifo_fill_levels  => open,
             coe_debug_hit_metadata      => open,
             coe_debug_hit_metadata_valid => open,
