@@ -23,7 +23,7 @@ canonical `rtl/` and `script/` trees.
 - DV dashboard: [`tb/DV_REPORT.md`](tb/DV_REPORT.md)
 - DV evidence tree: [`tb/REPORT/README.md`](tb/REPORT/README.md)
 - Latest QuestaOne migration failures were closed as harness issues; no new RTL blocker was reproduced in the current reruns. See [`tb/BUG_HISTORY.md`](tb/BUG_HISTORY.md).
-- Standalone synthesis now passes at the tightened `137.5 MHz` signoff clock and is fully constrained. See [`syn/SYN_REPORT.md`](syn/SYN_REPORT.md).
+- Standalone synthesis now passes at the tightened `137.5 MHz` signoff clock with four-corner TimeQuest slack >= 0 ns and clean qverify lint/CDC/RDC screens. See [`syn/SYN_REPORT.md`](syn/SYN_REPORT.md).
 
 ## Long-Run Workflow
 
