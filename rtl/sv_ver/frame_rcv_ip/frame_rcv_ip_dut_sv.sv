@@ -97,7 +97,6 @@ module frame_rcv_ip_dut_sv #(
     .avs_csr_writedata           (avs_csr_writedata),
     .asi_ctrl_data               (asi_ctrl_data),
     .asi_ctrl_valid              (asi_ctrl_valid),
-    .asi_ctrl_ready              (asi_ctrl_ready),
     .coe_debug_fifo_fill_levels  (unused_debug_fifo_fill_levels),
     .coe_debug_hit_metadata      (unused_debug_hit_metadata),
     .coe_debug_hit_metadata_valid(unused_debug_hit_metadata_valid),
@@ -105,6 +104,7 @@ module frame_rcv_ip_dut_sv #(
     .i_clk                       (i_clk)
   );
 
+  assign asi_ctrl_ready          = dut.ctrl_ready_comb;
   assign dbg_enable               = dut.enable;
   assign dbg_receiver_go          = dut.receiver_go;
   assign dbg_receiver_force_go    = dut.receiver_force_go;
