@@ -7,12 +7,18 @@ package require -exact qsys 16.1
 # Packaging constants
 # ========================================================================
 set SCRIPT_DIR [file dirname [info script]]
-if {[string length $SCRIPT_DIR] == 0} {
+if {[string length $SCRIPT_DIR] == 0 || $SCRIPT_DIR eq "."} {
     set SCRIPT_DIR [pwd]
 }
 set IP_DIR $SCRIPT_DIR
 if {[file tail $IP_DIR] eq "script"} {
     set IP_DIR [file dirname $IP_DIR]
+}
+if {![file exists [file join $IP_DIR rtl frame_rcv_ip.vhd]] && [info exists ::env(MU3E_IP_CORES_ROOT)]} {
+    set fallback_ip_dir [file join $::env(MU3E_IP_CORES_ROOT) mutrig_frame_deassembly]
+    if {[file exists [file join $fallback_ip_dir rtl frame_rcv_ip.vhd]]} {
+        set IP_DIR $fallback_ip_dir
+    }
 }
 set DEFAULT_CHANNEL_WIDTH_CONST    4
 set DEFAULT_CSR_ADDR_WIDTH_CONST   2
@@ -272,15 +278,15 @@ add_fileset QUARTUS_SYNTH QUARTUS_SYNTH "" ""
 set_fileset_property QUARTUS_SYNTH TOP_LEVEL frame_rcv_ip
 set_fileset_property QUARTUS_SYNTH ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property QUARTUS_SYNTH ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file frame_rcv_ip.vhd VHDL PATH rtl/frame_rcv_ip.vhd TOP_LEVEL_FILE
-add_fileset_file crc16_calc.vhd  VHDL PATH rtl/crc16_calc.vhd
+add_fileset_file frame_rcv_ip.vhd VHDL PATH [file join $IP_DIR rtl frame_rcv_ip.vhd] TOP_LEVEL_FILE
+add_fileset_file crc16_calc.vhd  VHDL PATH [file join $IP_DIR rtl crc16_calc.vhd]
 
 add_fileset SIM_VHDL SIM_VHDL "" ""
 set_fileset_property SIM_VHDL TOP_LEVEL frame_rcv_ip
 set_fileset_property SIM_VHDL ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property SIM_VHDL ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file frame_rcv_ip.vhd VHDL PATH rtl/frame_rcv_ip.vhd TOP_LEVEL_FILE
-add_fileset_file crc16_calc.vhd  VHDL PATH rtl/crc16_calc.vhd
+add_fileset_file frame_rcv_ip.vhd VHDL PATH [file join $IP_DIR rtl frame_rcv_ip.vhd] TOP_LEVEL_FILE
+add_fileset_file crc16_calc.vhd  VHDL PATH [file join $IP_DIR rtl crc16_calc.vhd]
 
 # ========================================================================
 # Parameters
