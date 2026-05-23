@@ -30,9 +30,10 @@
 -- Revision 1.37 - YW: Keep the dedicated CRC_CHECK cycle alive on idle-BC return so bad-CRC frames retire the sideband pulse and counter coherently.
 -- Revision 1.38 - YW: Add DEBUG_LV-gated exported observability for parser fill levels and per-hit metadata.
 -- Revision 1.39 - YW: Strip asi_ctrl_ready from entity port (rc-readyless contract); ctrl_ready_comb kept as local signal.
--- Version : 26.2.0
--- Date    : 20260511
--- Change  : Remove asi_ctrl_ready output port; preserve internal ctrl_ready_comb signal. Qsys no longer auto-inserts timing_adapter on ctrl sink (B002 fix).
+-- Revision 1.40 - YW: Add debug-header CSR at addr 3 (csr.dbg_header): latches the last parsed MuTRiG frame header {flags[31:26], frame_len[25:16], frame_number[15:0]} on n_frame_info_ready for sc readback.
+-- Version : 26.2.1
+-- Date    : 20260523
+-- Change  : Add read-only debug-header CSR at avmm addr 3 exposing the last parsed frame header (frame_number/len/flags) for on-board header validation.
 
 -- Additional Comments:
 --      IP wrapper layer: 
@@ -267,6 +268,7 @@ architecture rtl of frame_rcv_ip is
         frame_counter_tail  : std_logic_vector(31 downto 0);
         frame_counter_head  : std_logic_vector(31 downto 0);
         crc_err_counter : std_logic_vector(31 downto 0);
+        dbg_header      : std_logic_vector(31 downto 0); -- last parsed MuTRiG frame header: {frame_flags[31:26], frame_len[25:16], frame_number[15:0]}
 	end record;
 	signal csr 		: csr_t;
 
@@ -530,6 +532,9 @@ begin
                             avs_csr_readdata					<= csr.crc_err_counter;
                         when 2 =>
                             avs_csr_readdata                    <= csr.frame_counter;
+                        when 3 =>
+                            -- debug: last parsed frame header (flags | frame_len | frame_number)
+                            avs_csr_readdata                    <= csr.dbg_header;
                         when others =>
                     end case;
                 elsif (avs_csr_write = '1') then
@@ -548,14 +553,17 @@ begin
                     -- ------------------
                     -- update frame flag 
                     -- ------------------
-                    if (n_frame_info_ready = '1') then 
+                    if (n_frame_info_ready = '1') then
                         csr.status(5 downto 0)		<= n_frame_flags;
+                        -- debug: latch the freshly-parsed header fields for sc readback at addr 3
+                        csr.dbg_header              <= n_frame_flags & n_frame_len & n_frame_number;
                     end if;
                 end if;
             else 
                 csr.control		                <= (0 => '1', others => '0');
                 csr.status		                <= (others => '0');
                 csr.crc_err_counter	            <= (others => '0');
+                csr.dbg_header                  <= (others => '0');
                 csr.frame_counter               <= (others => '0');
                 csr.frame_counter_head          <= (others => '0');
                 csr.frame_counter_tail          <= (others => '0');
